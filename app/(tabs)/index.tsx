@@ -6,11 +6,16 @@ import { Typography } from '@/constants/Typography';
 import { supabase } from '@/lib/supabase';
 import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
+import { translateTeam, translateLeague } from '@/utils/translate';
 
 export default function HomeScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isZh = i18n.language.startsWith('zh');
+
+  const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
+  const displayLeague = (name: string) => isZh ? translateLeague(name) : name;
 
   const [predictions, setPredictions] = useState<any[]>([]);
   const [matches, setMatches] = useState<MatchOdds[]>([]);
@@ -48,7 +53,7 @@ export default function HomeScreen() {
       const market = bookmaker.markets.find(m => m.key === 'h2h');
       const homeOutcome = market?.outcomes.find(o => o.name === match.home_team);
       const awayOutcome = market?.outcomes.find(o => o.name === match.away_team);
-      const drawOutcome = market?.outcomes.find(o => o.name === 'Draw');
+      const drawOutcome = market?.outcomes.find(o => o.name === 'Draw' || o.name === '平局');
 
       return {
         providerName: bookmaker.title,
@@ -76,10 +81,10 @@ export default function HomeScreen() {
         matches.map(match => (
           <MatchCard
             key={match.id}
-            league={match.sport_title}
+            league={displayLeague(match.sport_title)}
             status={new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            team1={{ name: match.home_team, score: '-' }}
-            team2={{ name: match.away_team, score: '-' }}
+            team1={{ name: displayTeam(match.home_team), score: '-' }}
+            team2={{ name: displayTeam(match.away_team), score: '-' }}
             oddsList={getOddsList(match)}
           />
         ))
