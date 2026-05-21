@@ -7,6 +7,7 @@ const BASE_URL = 'https://api.the-odds-api.com/v4/sports';
 export interface OddsOutcome {
   name: string;
   price: number;
+  point?: number;
 }
 
 export interface Market {
@@ -33,9 +34,8 @@ export interface MatchOdds {
 }
 
 /**
- * 获取赛事及实时赔率
- * 默认获取 'soccer_epl'（英超）作为示例。由于目前 2026 世界杯还没开赛，
- * 测试时使用正在进行的联赛更容易看到数据。世界杯的 key 通常为 'soccer_fifa_world_cup'
+ * 获取赛事及实时赔率 (仅 h2h 胜平负)
+ * 默认获取 'soccer_epl'（英超）作为示例。
  */
 export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl'): Promise<MatchOdds[]> => {
   try {
@@ -43,8 +43,8 @@ export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl'):
       params: {
         apiKey: API_KEY,
         regions: 'eu,us', // 获取欧洲和美国的主流博彩公司
-        markets: 'h2h',   // Head to Head (胜平负)
-        oddsFormat: 'decimal', // 十进制赔率 (例如 1.50)
+        markets: 'h2h',   // Home 页为了简洁和节省额度，只拉取胜平负
+        oddsFormat: 'decimal',
       },
     });
     
@@ -52,5 +52,27 @@ export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl'):
   } catch (error) {
     console.error('Error fetching from The Odds API:', error);
     return [];
+  }
+};
+
+/**
+ * 获取单场比赛的详细赔率（包含多种盘口）
+ * 供“平台对比”详情页使用，下钻展示 h2h, spreads, totals
+ */
+export const fetchEventOdds = async (sportKey: string, eventId: string): Promise<MatchOdds | null> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/${sportKey}/events/${eventId}/odds`, {
+      params: {
+        apiKey: API_KEY,
+        regions: 'eu,us',
+        markets: 'h2h,spreads,totals',
+        oddsFormat: 'decimal',
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching event odds for ${eventId}:`, error);
+    return null;
   }
 };

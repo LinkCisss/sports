@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { Link } from 'expo-router';
 import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
@@ -7,6 +8,13 @@ import { supabase } from '@/lib/supabase';
 import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
+
+const LEAGUES = [
+  { key: 'soccer_epl', label: 'EPL' },
+  { key: 'soccer_fifa_world_cup', label: 'World Cup' },
+  { key: 'soccer_uefa_champs_league', label: 'Champions League' },
+  { key: 'soccer_spain_la_liga', label: 'La Liga' },
+];
 
 export default function HomeScreen() {
   const theme = useColorScheme() ?? 'light';
@@ -17,36 +25,35 @@ export default function HomeScreen() {
   const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
   const displayLeague = (name: string) => isZh ? translateLeague(name) : name;
 
-  const [predictions, setPredictions] = useState<any[]>([]);
+  const [selectedLeague, setSelectedLeague] = useState(LEAGUES[0].key);
   const [matches, setMatches] = useState<MatchOdds[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadMatches = async () => {
-    const data = await fetchLiveMatchesWithOdds('soccer_epl'); // 测试时使用英超数据
+  const loadMatches = async (leagueKey: string) => {
+    const data = await fetchLiveMatchesWithOdds(leagueKey);
     setMatches(data);
   };
 
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      await loadMatches();
+      await loadMatches(selectedLeague);
       setLoading(false);
     };
     initData();
-  }, []);
+  }, [selectedLeague]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadMatches();
+    await loadMatches(selectedLeague);
     setRefreshing(false);
-  }, []);
+  }, [selectedLeague]);
 
-  // 辅助函数：解析出给 MatchCard 使用的 oddsList (最多取3家平台对比)
+  // 取前三家平台进行 h2h 对比（首页保持简洁）
   const getOddsList = (match: MatchOdds) => {
     if (!match.bookmakers || match.bookmakers.length === 0) return undefined;
     
-    // 取前三家平台进行对比
     const topBookmakers = match.bookmakers.slice(0, 3);
     
     return topBookmakers.map(bookmaker => {
@@ -74,19 +81,55 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={[styles.dateText, { color: colors.text }]}>{t('home.today')}</Text>
       </View>
+
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.leagueSwitcher} 
+        contentContainerStyle={styles.leagueSwitcherContent}
+      >
+        {LEAGUES.map(league => {
+          const isActive = selectedLeague === league.key;
+          return (
+            <Pressable 
+              key={league.key}
+              style={[
+                styles.leaguePill, 
+                { borderColor: colors.border },
+                isActive && { backgroundColor: colors.accent, borderColor: colors.accent }
+              ]}
+              onPress={() => setSelectedLeague(league.key)}
+            >
+              <Text style={[
+                styles.leaguePillText, 
+                { color: isActive ? '#fff' : colors.textSecondary }
+              ]}>
+                {displayLeague(league.label)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
       
       {loading ? (
         <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />
       ) : matches.length > 0 ? (
         matches.map(match => (
-          <MatchCard
-            key={match.id}
-            league={displayLeague(match.sport_title)}
-            status={new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            team1={{ name: displayTeam(match.home_team), score: '-' }}
-            team2={{ name: displayTeam(match.away_team), score: '-' }}
-            oddsList={getOddsList(match)}
-          />
+          <Link 
+            key={match.id} 
+            href={{ pathname: '/match/[id]', params: { id: match.id, sportKey: match.sport_key } }} 
+            asChild
+          >
+            <Pressable>
+              <MatchCard
+                league={displayLeague(match.sport_title)}
+                status={new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                team1={{ name: displayTeam(match.home_team), score: '-' }}
+                team2={{ name: displayTeam(match.away_team), score: '-' }}
+                oddsList={getOddsList(match)}
+              />
+            </Pressable>
+          </Link>
         ))
       ) : (
         <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
@@ -115,5 +158,25 @@ const styles = StyleSheet.create({
     ...Typography.body,
     textAlign: 'center',
     marginTop: 40,
+  },
+  leagueSwitcher: {
+    maxHeight: 40,
+    marginBottom: 8,
+  },
+  leagueSwitcherContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  leaguePill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaguePillText: {
+    ...Typography.caption,
+    fontWeight: '600',
   },
 });

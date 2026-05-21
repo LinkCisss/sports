@@ -1,13 +1,34 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View, Text, useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, Pressable } from 'react-native';
+import { Link } from 'expo-router';
+import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { useTranslation } from 'react-i18next';
+import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
+import { translateTeam, translateLeague } from '@/utils/translate';
 
 export default function CompareScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isZh = i18n.language.startsWith('zh');
+
+  const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
+  const displayLeague = (name: string) => isZh ? translateLeague(name) : name;
+
+  const [matches, setMatches] = useState<MatchOdds[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const initData = async () => {
+      setLoading(true);
+      const data = await fetchLiveMatchesWithOdds('soccer_fifa_world_cup'); // 对比页默认看世界杯或热门
+      setMatches(data);
+      setLoading(false);
+    };
+    initData();
+  }, []);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -18,11 +39,34 @@ export default function CompareScreen() {
         </Text>
       </View>
 
-      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-        <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-          {t('compare.placeholder')}
-        </Text>
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />
+      ) : matches.length > 0 ? (
+        matches.map(match => (
+          <Link 
+            key={match.id} 
+            href={{ pathname: '/match/[id]', params: { id: match.id, sportKey: match.sport_key } }} 
+            asChild
+          >
+            <Pressable>
+              <MatchCard
+                league={displayLeague(match.sport_title)}
+                status={new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                team1={{ name: displayTeam(match.home_team), score: '-' }}
+                team2={{ name: displayTeam(match.away_team), score: '-' }}
+                // 对比页的列表可以不用展示 oddsList，因为点进去才有
+              />
+            </Pressable>
+          </Link>
+        ))
+      ) : (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+            {t('home.no_matches')}
+          </Text>
+        </View>
+      )}
+      <View style={{ height: 100 }} />
     </ScrollView>
   );
 }
