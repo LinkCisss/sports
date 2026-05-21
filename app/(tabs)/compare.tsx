@@ -7,6 +7,7 @@ import { Typography } from '@/constants/Typography';
 import { useTranslation } from 'react-i18next';
 import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { translateTeam, translateLeague } from '@/utils/translate';
+import { formatMatchTime } from '@/utils/date';
 
 export default function CompareScreen() {
   const theme = useColorScheme() ?? 'light';
@@ -51,7 +52,7 @@ export default function CompareScreen() {
             <Pressable>
               <MatchCard
                 league={displayLeague(match.sport_title)}
-                status={new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                time={formatMatchTime(match.commence_time, isZh)}
                 team1={{ name: displayTeam(match.home_team), score: '-' }}
                 team2={{ name: displayTeam(match.away_team), score: '-' }}
                 // 对比页的列表可以不用展示 oddsList，因为点进去才有

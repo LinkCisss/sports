@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
+import { formatMatchTime } from '@/utils/date';
 
 const LEAGUES = [
   { key: 'soccer_epl', label: 'EPL' },
@@ -123,7 +124,7 @@ export default function HomeScreen() {
             <Pressable>
               <MatchCard
                 league={displayLeague(match.sport_title)}
-                status={new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                time={formatMatchTime(match.commence_time, isZh)}
                 team1={{ name: displayTeam(match.home_team), score: '-' }}
                 team2={{ name: displayTeam(match.away_team), score: '-' }}
                 oddsList={getOddsList(match)}

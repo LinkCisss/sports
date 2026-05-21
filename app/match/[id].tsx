@@ -6,6 +6,7 @@ import { Typography } from '@/constants/Typography';
 import { fetchEventOdds, MatchOdds, Bookmaker } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
+import { formatMatchTime } from '@/utils/date';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 export default function MatchDetailScreen() {
@@ -103,7 +104,7 @@ export default function MatchDetailScreen() {
         {/* Match Header */}
         <View style={styles.matchHeader}>
           <Text style={[styles.time, { color: colors.accent }]}>
-            {new Date(matchData.commence_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {formatMatchTime(matchData.commence_time, isZh)}
           </Text>
           <View style={styles.teamsRow}>
             <Text style={[styles.teamName, { color: colors.text }]}>{displayTeam(matchData.home_team)}</Text>
