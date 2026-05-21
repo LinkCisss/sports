@@ -7,25 +7,40 @@ import 'react-native-url-polyfill/auto';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://wjuejnnswqyyumgbkqqt.supabase.co';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_7STDO_bBJPtKAXnTdhVxFQ_TBpo1G5b';
 
-// 用于持久化用户会话的存储适配器 (Expo Secure Store)
-const ExpoSecureStoreAdapter = {
+import { Platform } from 'react-native';
+
+// 自适应存储适配器：Web 端使用 localStorage，原生端使用 SecureStore
+const customStorageAdapter = {
   getItem: (key: string) => {
+    if (Platform.OS === 'web') {
+      if (typeof localStorage === 'undefined') return Promise.resolve(null);
+      return Promise.resolve(localStorage.getItem(key));
+    }
     return SecureStore.getItemAsync(key);
   },
   setItem: (key: string, value: string) => {
-    SecureStore.setItemAsync(key, value);
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+      return Promise.resolve();
+    }
+    return SecureStore.setItemAsync(key, value);
   },
   removeItem: (key: string) => {
-    SecureStore.deleteItemAsync(key);
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+      return Promise.resolve();
+    }
+    return SecureStore.deleteItemAsync(key);
   },
 };
 
 // 初始化 Supabase 客户端
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: ExpoSecureStoreAdapter as any,
+    storage: customStorageAdapter as any,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
+
 });

@@ -6,6 +6,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import '../lib/i18n'; // <-- 引入 i18n 配置
+
 import { useColorScheme } from '@/components/useColorScheme';
 
 export {

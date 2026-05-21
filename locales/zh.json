@@ -1,0 +1,31 @@
+{
+  "tabs": {
+    "scores": "比分",
+    "compare": "对比",
+    "predict": "预测",
+    "profile": "我的"
+  },
+  "home": {
+    "today": "今日比赛",
+    "no_matches": "当前没有比赛",
+    "odds_by": "赔率提供商："
+  },
+  "compare": {
+    "title": "赔率对比",
+    "subtitle": "对比多家平台的实时赔率",
+    "placeholder": "赔率对比 UI 将在这里显示。"
+  },
+  "predict": {
+    "title": "做出预测",
+    "placeholder": "预测界面将在这里显示。"
+  },
+  "profile": {
+    "title": "我的体育",
+    "guest_user": "游客",
+    "stats": "0 次预测 • 0 积分",
+    "settings": "设置",
+    "language": "语言 / Language",
+    "chinese": "中文",
+    "english": "English"
+  }
+}

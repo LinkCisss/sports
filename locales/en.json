@@ -1,0 +1,31 @@
+{
+  "tabs": {
+    "scores": "Scores",
+    "compare": "Compare",
+    "predict": "Predict",
+    "profile": "Profile"
+  },
+  "home": {
+    "today": "Today",
+    "no_matches": "No matches found right now.",
+    "odds_by": "Odds by "
+  },
+  "compare": {
+    "title": "Odds Compare",
+    "subtitle": "Compare odds across multiple platforms",
+    "placeholder": "Odds comparison UI will go here."
+  },
+  "predict": {
+    "title": "Make a Prediction",
+    "placeholder": "Prediction interface will go here."
+  },
+  "profile": {
+    "title": "My Sports",
+    "guest_user": "Guest User",
+    "stats": "0 Predictions • 0 Points",
+    "settings": "Settings",
+    "language": "Language",
+    "chinese": "中文 (Chinese)",
+    "english": "English"
+  }
+}

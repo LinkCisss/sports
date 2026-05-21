@@ -3,6 +3,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTranslation } from 'react-i18next';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -17,6 +18,7 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -50,28 +52,28 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Scores',
+          title: t('tabs.scores'),
           tabBarIcon: ({ color }) => <TabBarIcon name="futbol-o" color={color} />,
         }}
       />
       <Tabs.Screen
         name="compare"
         options={{
-          title: 'Compare',
+          title: t('tabs.compare'),
           tabBarIcon: ({ color }) => <TabBarIcon name="bar-chart" color={color} />,
         }}
       />
       <Tabs.Screen
         name="predict"
         options={{
-          title: 'Predict',
+          title: t('tabs.predict'),
           tabBarIcon: ({ color }) => <TabBarIcon name="star" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'My Sports',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />

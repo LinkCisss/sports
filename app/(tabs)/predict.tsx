@@ -2,20 +2,22 @@ import React from 'react';
 import { StyleSheet, ScrollView, View, Text, useColorScheme } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
+import { useTranslation } from 'react-i18next';
 
 export default function PredictScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
+  const { t } = useTranslation();
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Make a Prediction</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('predict.title')}</Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-          Prediction interface will go here.
+          {t('predict.placeholder')}
         </Text>
       </View>
     </ScrollView>

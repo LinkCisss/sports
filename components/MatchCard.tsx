@@ -3,18 +3,21 @@ import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 
+import { useTranslation } from 'react-i18next';
+
 interface MatchCardProps {
   league: string;
   status: string;
   team1: { name: string; score: string | number };
   team2: { name: string; score: string | number };
-  odds?: { providerName?: string; team1: number; draw: number; team2: number };
+  oddsList?: Array<{ providerName: string; team1: number; draw: number; team2: number }>;
 }
 
-export function MatchCard({ league, status, team1, team2, odds }: MatchCardProps) {
+export function MatchCard({ league, status, team1, team2, oddsList }: MatchCardProps) {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
   const isLive = status.includes('LIVE') || status.includes("'");
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
@@ -50,27 +53,29 @@ export function MatchCard({ league, status, team1, team2, odds }: MatchCardProps
       </View>
 
       {/* Odds */}
-      {odds && (
+      {oddsList && oddsList.length > 0 && (
         <View style={[styles.oddsContainer, { borderTopColor: colors.border }]}>
-          {odds.providerName && (
-            <Text style={[styles.providerText, { color: colors.textSecondary }]}>
-              Odds by {odds.providerName}
-            </Text>
-          )}
-          <View style={styles.oddsBoxes}>
-            <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
-              <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>1</Text>
-              <Text style={[styles.oddValue, { color: colors.text }]}>{odds.team1.toFixed(2)}</Text>
+          {oddsList.map((odds, index) => (
+            <View key={index} style={{ marginBottom: 12 }}>
+              <Text style={[styles.providerText, { color: colors.textSecondary }]}>
+                {t('home.odds_by')}{odds.providerName}
+              </Text>
+              <View style={styles.oddsBoxes}>
+                <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>1</Text>
+                  <Text style={[styles.oddValue, { color: colors.text }]}>{odds.team1.toFixed(2)}</Text>
+                </View>
+                <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>X</Text>
+                  <Text style={[styles.oddValue, { color: colors.text }]}>{odds.draw.toFixed(2)}</Text>
+                </View>
+                <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>2</Text>
+                  <Text style={[styles.oddValue, { color: colors.text }]}>{odds.team2.toFixed(2)}</Text>
+                </View>
+              </View>
             </View>
-            <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
-              <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>X</Text>
-              <Text style={[styles.oddValue, { color: colors.text }]}>{odds.draw.toFixed(2)}</Text>
-            </View>
-            <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
-              <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>2</Text>
-              <Text style={[styles.oddValue, { color: colors.text }]}>{odds.team2.toFixed(2)}</Text>
-            </View>
-          </View>
+          ))}
         </View>
       )}
     </View>
