@@ -36,43 +36,96 @@ export const getTeamFlagCode = (teamName: string): string | undefined => {
     "Real Madrid": "ES",
     "Barcelona": "ES",
     "Atletico Madrid": "ES",
+    "Sevilla": "ES",
+    "Valencia": "ES",
     
     // German Clubs -> DE
     "Bayern Munich": "DE",
     "Borussia Dortmund": "DE",
+    "Bayer Leverkusen": "DE",
+    "RB Leipzig": "DE",
     
     // French Clubs -> FR
     "Paris Saint Germain": "FR",
+    "Marseille": "FR",
+    "Lyon": "FR",
     
     // Italian Clubs -> IT
     "Juventus": "IT",
     "AC Milan": "IT",
     "Inter Milan": "IT",
+    "Napoli": "IT",
+    "AS Roma": "IT",
 
-    // National Teams
-    "Argentina": "AR",
-    "Brazil": "BR",
+    // ----------------------------------------------------
+    // National Teams (World Cup & International)
+    // ----------------------------------------------------
+    // Europe
     "France": "FR",
     "Germany": "DE",
-    "England": "GB", // Can also be mapped to GB-ENG if supported by flag library, but usually GB is safest fallback
+    "England": "GB",
     "Spain": "ES",
     "Portugal": "PT",
     "Italy": "IT",
     "Netherlands": "NL",
     "Belgium": "BE",
     "Croatia": "HR",
+    "Switzerland": "CH",
+    "Denmark": "DK",
+    "Sweden": "SE",
+    "Norway": "NO",
+    "Poland": "PL",
+    "Serbia": "RS",
+    "Turkey": "TR",
+    "Wales": "GB",
+    "Scotland": "GB",
+    
+    // South America
+    "Argentina": "AR",
+    "Brazil": "BR",
     "Uruguay": "UY",
     "Colombia": "CO",
-    "Senegal": "SN",
-    "Morocco": "MA",
-    "Japan": "JP",
-    "South Korea": "KR",
+    "Chile": "CL",
+    "Ecuador": "EC",
+    "Peru": "PE",
+    "Paraguay": "PY",
+    "Venezuela": "VE",
+    "Bolivia": "BO",
+
+    // North & Central America
     "United States": "US",
     "Mexico": "MX",
     "Canada": "CA",
-    "China": "CN",
-    "Australia": "AU",
+    "Costa Rica": "CR",
+    "Panama": "PA",
+    "Jamaica": "JM",
+    "Honduras": "HN",
+
+    // Africa
+    "Senegal": "SN",
+    "Morocco": "MA",
+    "South Africa": "ZA",
+    "Nigeria": "NG",
+    "Egypt": "EG",
+    "Ghana": "GH",
+    "Cameroon": "CM",
+    "Tunisia": "TN",
+    "Algeria": "DZ",
+    "Ivory Coast": "CI",
+    "Mali": "ML",
+    
+    // Asia & Oceania
+    "Japan": "JP",
+    "South Korea": "KR",
     "Saudi Arabia": "SA",
+    "Iran": "IR",
+    "Australia": "AU",
+    "Qatar": "QA",
+    "United Arab Emirates": "AE",
+    "China": "CN",
+    "Iraq": "IQ",
+    "Uzbekistan": "UZ",
+    "New Zealand": "NZ"
   };
   return dictionary[teamName];
 };

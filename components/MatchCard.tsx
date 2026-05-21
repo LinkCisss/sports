@@ -40,10 +40,8 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
       <View style={styles.matchInfo}>
         <View style={styles.teamRow}>
           <View style={styles.teamLeft}>
-            {team1.flagCode ? (
+            {team1.flagCode && (
               <CountryFlag isoCode={team1.flagCode} size={24} style={styles.flag} />
-            ) : (
-              <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]} />
             )}
             <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={1}>
               {team1.name}
@@ -54,10 +52,8 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
 
         <View style={styles.teamRow}>
           <View style={styles.teamLeft}>
-            {team2.flagCode ? (
+            {team2.flagCode && (
               <CountryFlag isoCode={team2.flagCode} size={24} style={styles.flag} />
-            ) : (
-              <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]} />
             )}
             <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={1}>
               {team2.name}
