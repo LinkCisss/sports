@@ -1,29 +1,31 @@
-const tintColorLight = '#8A1538';
-const tintColorDark = '#D4AF37';
+const tintColorLight = '#FF3B5C'; // Elegant Red
+const tintColorDark = '#FF3B5C'; 
 
 export const Colors = {
   light: {
     text: '#111111',
-    textSecondary: '#6E6E73',
-    background: '#F5F5F7',
+    textSecondary: '#8E8E93',
+    background: '#F2F2F7', // Classic Apple Light Gray
     cardBackground: '#FFFFFF',
     tint: tintColorLight,
     icon: '#8E8E93',
     tabIconDefault: '#8E8E93',
     tabIconSelected: tintColorLight,
-    accent: '#8A1538',
+    accent: '#FF3B5C',
     border: '#E5E5EA',
+    gold: '#FFD700',
   },
   dark: {
     text: '#FFFFFF',
-    textSecondary: '#EBEBF5', 
-    background: '#000000',
-    cardBackground: '#1C1C1E',
+    textSecondary: '#8E8E93', 
+    background: '#121212', // Deep Dark
+    cardBackground: '#1C1C1E', // Frosted Glass Dark
     tint: tintColorDark,
-    icon: '#EBEBF5',
+    icon: '#8E8E93',
     tabIconDefault: '#8E8E93',
     tabIconSelected: tintColorDark,
-    accent: '#D4AF37',
-    border: '#38383A',
+    accent: '#FF3B5C',
+    border: '#2C2C2E',
+    gold: '#FFD700',
   },
 };

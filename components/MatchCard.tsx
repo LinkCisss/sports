@@ -2,14 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
+import CountryFlag from 'react-native-country-flag';
 
 import { useTranslation } from 'react-i18next';
 
 interface MatchCardProps {
   league: string;
   time: string;
-  team1: { name: string; score: string | number };
-  team2: { name: string; score: string | number };
+  team1: { name: string; score: string | number; flagCode?: string };
+  team2: { name: string; score: string | number; flagCode?: string };
   oddsList?: Array<{ providerName: string; team1: number; draw: number; team2: number }>;
 }
 
@@ -23,11 +24,11 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
     <View style={[
       styles.card, 
       { backgroundColor: colors.cardBackground },
-      theme === 'light' && styles.shadow
+      theme === 'light' ? styles.shadowLight : styles.shadowDark
     ]}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.leagueBadge, { backgroundColor: colors.accent + '15' }]}>
+        <View style={[styles.leagueBadge, { backgroundColor: colors.accent + '20' }]}>
           <Text style={[styles.leagueText, { color: colors.accent }]}>{league}</Text>
         </View>
         <Text style={[styles.timeText, { color: isLive ? colors.accent : colors.textSecondary }]}>
@@ -39,7 +40,11 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
       <View style={styles.matchInfo}>
         <View style={styles.teamRow}>
           <View style={styles.teamLeft}>
-            <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]} />
+            {team1.flagCode ? (
+              <CountryFlag isoCode={team1.flagCode} size={24} style={styles.flag} />
+            ) : (
+              <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]} />
+            )}
             <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={1}>
               {team1.name}
             </Text>
@@ -49,7 +54,11 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
 
         <View style={styles.teamRow}>
           <View style={styles.teamLeft}>
-            <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]} />
+            {team2.flagCode ? (
+              <CountryFlag isoCode={team2.flagCode} size={24} style={styles.flag} />
+            ) : (
+              <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]} />
+            )}
             <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={1}>
               {team2.name}
             </Text>
@@ -90,41 +99,49 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 24, // High-end luxurious corner radius
+    padding: 20, // Ample padding for breathing room
     marginVertical: 10,
     marginHorizontal: 16,
   },
-  shadow: {
+  shadowLight: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  shadowDark: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 4,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   leagueBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12, // Pill shape
   },
   leagueText: {
     ...Typography.caption,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   timeText: {
     ...Typography.body,
-    fontWeight: '600',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 15,
   },
   matchInfo: {
-    gap: 16,
+    gap: 20, // More breathing room between teams
   },
   teamRow: {
     flexDirection: 'row',
@@ -134,7 +151,7 @@ const styles = StyleSheet.create({
   teamLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16, // Space between flag and name
     flex: 1,
   },
   logoPlaceholder: {
@@ -142,17 +159,22 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
   },
+  flag: {
+    width: 32,
+    height: 24,
+    borderRadius: 4,
+  },
   teamName: {
     ...Typography.teamName,
     flex: 1,
   },
   score: {
     ...Typography.scores,
-    minWidth: 32,
+    minWidth: 40,
     textAlign: 'right',
   },
   oddsContainer: {
-    marginTop: 20,
+    marginTop: 24,
     paddingTop: 16,
     borderTopWidth: 1,
   },
@@ -162,29 +184,30 @@ const styles = StyleSheet.create({
   providerText: {
     ...Typography.caption,
     fontSize: 12,
-    marginBottom: 8,
+    marginBottom: 10,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1, // Elegant tracking
   },
   oddsBoxes: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   oddBox: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 12, // Taller buttons for tap targets
+    paddingHorizontal: 16,
+    borderRadius: 12,
   },
   oddLabel: {
     ...Typography.caption,
-    opacity: 0.7,
+    opacity: 0.6,
   },
   oddValue: {
-    ...Typography.caption,
+    ...Typography.body, // Slightly larger font for values
     fontWeight: '700',
+    fontVariant: ['tabular-nums'], // Monospaced digits for perfect alignment
   },
 });

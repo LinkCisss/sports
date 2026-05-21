@@ -7,7 +7,9 @@ import { fetchEventOdds, MatchOdds, Bookmaker } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
 import { formatMatchTime } from '@/utils/date';
+import { getTeamFlagCode } from '@/utils/flags';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import CountryFlag from 'react-native-country-flag';
 
 export default function MatchDetailScreen() {
   const { id, sportKey } = useLocalSearchParams<{ id: string; sportKey: string }>();
@@ -107,9 +109,23 @@ export default function MatchDetailScreen() {
             {formatMatchTime(matchData.commence_time, isZh)}
           </Text>
           <View style={styles.teamsRow}>
-            <Text style={[styles.teamName, { color: colors.text }]}>{displayTeam(matchData.home_team)}</Text>
+            <View style={{ alignItems: 'center', flex: 1, gap: 8 }}>
+              {getTeamFlagCode(matchData.home_team) && (
+                <CountryFlag isoCode={getTeamFlagCode(matchData.home_team)!} size={32} style={{ borderRadius: 4 }} />
+              )}
+              <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2} adjustsFontSizeToFit>
+                {displayTeam(matchData.home_team)}
+              </Text>
+            </View>
             <Text style={[styles.vs, { color: colors.textSecondary }]}>vs</Text>
-            <Text style={[styles.teamName, { color: colors.text }]}>{displayTeam(matchData.away_team)}</Text>
+            <View style={{ alignItems: 'center', flex: 1, gap: 8 }}>
+              {getTeamFlagCode(matchData.away_team) && (
+                <CountryFlag isoCode={getTeamFlagCode(matchData.away_team)!} size={32} style={{ borderRadius: 4 }} />
+              )}
+              <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2} adjustsFontSizeToFit>
+                {displayTeam(matchData.away_team)}
+              </Text>
+            </View>
           </View>
         </View>
 

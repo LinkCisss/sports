@@ -9,6 +9,7 @@ import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
 import { formatMatchTime } from '@/utils/date';
+import { getTeamFlagCode } from '@/utils/flags';
 import dayjs from 'dayjs';
 
 const LEAGUES = [
@@ -33,21 +34,38 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // 当联赛切换时，自动调整默认日期
+  const handleLeagueChange = (leagueKey: string) => {
+    setSelectedLeague(leagueKey);
+    if (leagueKey === 'soccer_fifa_world_cup') {
+      setSelectedDate('2026-06-11');
+    } else {
+      setSelectedDate(dayjs().format('YYYY-MM-DD'));
+    }
+  };
+
   // 生成顶部日期数据
   const dateOptions = useMemo(() => {
     const options = [];
-    for (let i = -1; i <= 7; i++) {
-      const d = dayjs().add(i, 'day');
-      let label = d.format('MM-DD');
-      if (i === 0) label = isZh ? '今天' : 'Today';
-      else if (i === -1) label = isZh ? '昨天' : 'Yesterday';
-      else if (i === 1) label = isZh ? '明天' : 'Tomorrow';
-      options.push({ label, value: d.format('YYYY-MM-DD') });
+    if (selectedLeague === 'soccer_fifa_world_cup') {
+      // 世界杯专属日期轴 (2026-06-11 开始)
+      const wcStart = dayjs('2026-06-11');
+      for (let i = 0; i <= 14; i++) {
+        const d = wcStart.add(i, 'day');
+        options.push({ label: d.format('MM-DD'), value: d.format('YYYY-MM-DD') });
+      }
+    } else {
+      for (let i = -1; i <= 7; i++) {
+        const d = dayjs().add(i, 'day');
+        let label = d.format('MM-DD');
+        if (i === 0) label = isZh ? '今天' : 'Today';
+        else if (i === -1) label = isZh ? '昨天' : 'Yesterday';
+        else if (i === 1) label = isZh ? '明天' : 'Tomorrow';
+        options.push({ label, value: d.format('YYYY-MM-DD') });
+      }
     }
-    // 特别为测试添加世界杯开幕日
-    options.push({ label: isZh ? 'WC 开幕' : 'WC Start', value: '2026-06-11' });
     return options;
-  }, [isZh]);
+  }, [isZh, selectedLeague]);
 
   const loadMatches = async (leagueKey: string, dateStr: string) => {
     const data = await fetchLiveMatchesWithOdds(leagueKey, dateStr);
@@ -147,7 +165,7 @@ export default function HomeScreen() {
                 { borderColor: colors.border, borderWidth: isActive ? 0 : 1 },
                 isActive ? { backgroundColor: colors.text } : { backgroundColor: 'transparent' }
               ]}
-              onPress={() => setSelectedLeague(league.key)}
+              onPress={() => handleLeagueChange(league.key)}
             >
               <Text style={[
                 styles.pillText, 
@@ -169,21 +187,31 @@ export default function HomeScreen() {
             href={{ pathname: '/match/[id]', params: { id: match.id, sportKey: match.sport_key } }} 
             asChild
           >
-            <Pressable>
+            <Pressable style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
               <MatchCard
                 league={displayLeague(match.sport_title)}
                 time={formatMatchTime(match.commence_time, isZh)}
-                team1={{ name: displayTeam(match.home_team), score: '-' }}
-                team2={{ name: displayTeam(match.away_team), score: '-' }}
+                team1={{ 
+                  name: displayTeam(match.home_team), 
+                  score: '-', 
+                  flagCode: getTeamFlagCode(match.home_team) 
+                }}
+                team2={{ 
+                  name: displayTeam(match.away_team), 
+                  score: '-', 
+                  flagCode: getTeamFlagCode(match.away_team) 
+                }}
                 oddsList={getOddsList(match)}
               />
             </Pressable>
           </Link>
         ))
       ) : (
-        <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-          {t('home.no_matches')}
-        </Text>
+        <View style={{ alignItems: 'center', marginTop: 80 }}>
+          <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
+            {isZh ? '暂无比赛\n点击上方切换其他日期' : 'No matches found\nSelect another date above'}
+          </Text>
+        </View>
       )}
       
       <View style={{ height: 100 }} />

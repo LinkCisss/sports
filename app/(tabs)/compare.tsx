@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { translateTeam, translateLeague } from '@/utils/translate';
 import { formatMatchTime } from '@/utils/date';
+import { getTeamFlagCode } from '@/utils/flags';
 
 export default function CompareScreen() {
   const theme = useColorScheme() ?? 'light';
@@ -49,12 +50,20 @@ export default function CompareScreen() {
             href={{ pathname: '/match/[id]', params: { id: match.id, sportKey: match.sport_key } }} 
             asChild
           >
-            <Pressable>
+            <Pressable style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
               <MatchCard
                 league={displayLeague(match.sport_title)}
                 time={formatMatchTime(match.commence_time, isZh)}
-                team1={{ name: displayTeam(match.home_team), score: '-' }}
-                team2={{ name: displayTeam(match.away_team), score: '-' }}
+                team1={{ 
+                  name: displayTeam(match.home_team), 
+                  score: '-', 
+                  flagCode: getTeamFlagCode(match.home_team) 
+                }}
+                team2={{ 
+                  name: displayTeam(match.away_team), 
+                  score: '-', 
+                  flagCode: getTeamFlagCode(match.away_team) 
+                }}
                 // 对比页的列表可以不用展示 oddsList，因为点进去才有
               />
             </Pressable>
