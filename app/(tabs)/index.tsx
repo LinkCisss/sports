@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { Link } from 'expo-router';
 import { MatchCard } from '@/components/MatchCard';
@@ -9,6 +9,7 @@ import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
 import { formatMatchTime } from '@/utils/date';
+import dayjs from 'dayjs';
 
 const LEAGUES = [
   { key: 'soccer_epl', label: 'EPL' },
@@ -27,29 +28,46 @@ export default function HomeScreen() {
   const displayLeague = (name: string) => isZh ? translateLeague(name) : name;
 
   const [selectedLeague, setSelectedLeague] = useState(LEAGUES[0].key);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [matches, setMatches] = useState<MatchOdds[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadMatches = async (leagueKey: string) => {
-    const data = await fetchLiveMatchesWithOdds(leagueKey);
+  // 生成顶部日期数据
+  const dateOptions = useMemo(() => {
+    const options = [];
+    for (let i = -1; i <= 7; i++) {
+      const d = dayjs().add(i, 'day');
+      let label = d.format('MM-DD');
+      if (i === 0) label = isZh ? '今天' : 'Today';
+      else if (i === -1) label = isZh ? '昨天' : 'Yesterday';
+      else if (i === 1) label = isZh ? '明天' : 'Tomorrow';
+      options.push({ label, value: d.format('YYYY-MM-DD') });
+    }
+    // 特别为测试添加世界杯开幕日
+    options.push({ label: isZh ? 'WC 开幕' : 'WC Start', value: '2026-06-11' });
+    return options;
+  }, [isZh]);
+
+  const loadMatches = async (leagueKey: string, dateStr: string) => {
+    const data = await fetchLiveMatchesWithOdds(leagueKey, dateStr);
     setMatches(data);
   };
 
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      await loadMatches(selectedLeague);
+      await loadMatches(selectedLeague, selectedDate);
       setLoading(false);
     };
     initData();
-  }, [selectedLeague]);
+  }, [selectedLeague, selectedDate]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadMatches(selectedLeague);
+    await loadMatches(selectedLeague, selectedDate);
     setRefreshing(false);
-  }, [selectedLeague]);
+  }, [selectedLeague, selectedDate]);
 
   // 取前三家平台进行 h2h 对比（首页保持简洁）
   const getOddsList = (match: MatchOdds) => {
@@ -83,11 +101,41 @@ export default function HomeScreen() {
         <Text style={[styles.dateText, { color: colors.text }]}>{t('home.today')}</Text>
       </View>
 
+      {/* Date Switcher */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false} 
-        style={styles.leagueSwitcher} 
-        contentContainerStyle={styles.leagueSwitcherContent}
+        style={styles.switcher} 
+        contentContainerStyle={styles.switcherContent}
+      >
+        {dateOptions.map(dateOpt => {
+          const isActive = selectedDate === dateOpt.value;
+          return (
+            <Pressable 
+              key={dateOpt.value}
+              style={[
+                styles.pill, 
+                isActive ? { backgroundColor: colors.accent } : { backgroundColor: colors.cardBackground }
+              ]}
+              onPress={() => setSelectedDate(dateOpt.value)}
+            >
+              <Text style={[
+                styles.pillText, 
+                { color: isActive ? '#fff' : colors.text }
+              ]}>
+                {dateOpt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* League Switcher */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.switcher} 
+        contentContainerStyle={styles.switcherContent}
       >
         {LEAGUES.map(league => {
           const isActive = selectedLeague === league.key;
@@ -95,15 +143,15 @@ export default function HomeScreen() {
             <Pressable 
               key={league.key}
               style={[
-                styles.leaguePill, 
-                { borderColor: colors.border },
-                isActive && { backgroundColor: colors.accent, borderColor: colors.accent }
+                styles.pill, 
+                { borderColor: colors.border, borderWidth: isActive ? 0 : 1 },
+                isActive ? { backgroundColor: colors.text } : { backgroundColor: 'transparent' }
               ]}
               onPress={() => setSelectedLeague(league.key)}
             >
               <Text style={[
-                styles.leaguePillText, 
-                { color: isActive ? '#fff' : colors.textSecondary }
+                styles.pillText, 
+                { color: isActive ? colors.background : colors.textSecondary }
               ]}>
                 {displayLeague(league.label)}
               </Text>
@@ -160,23 +208,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
   },
-  leagueSwitcher: {
+  switcher: {
     maxHeight: 40,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  leagueSwitcherContent: {
+  switcherContent: {
     paddingHorizontal: 16,
     gap: 8,
   },
-  leaguePill: {
+  pill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  leaguePillText: {
+  pillText: {
     ...Typography.caption,
     fontWeight: '600',
   },

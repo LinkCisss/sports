@@ -1,4 +1,7 @@
 import axios from 'axios';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 // The Odds API 免费版配额有限，请注意调用频率
 const API_KEY = process.env.EXPO_PUBLIC_ODDS_API_KEY || '90ac78ab00a546e7440e90a7c93316fe';
@@ -35,18 +38,25 @@ export interface MatchOdds {
 
 /**
  * 获取赛事及实时赔率 (仅 h2h 胜平负)
- * 默认获取 'soccer_epl'（英超）作为示例。
+ * @param sportKey 联赛 Key
+ * @param dateString 可选：指定查询的日期 (YYYY-MM-DD)，不传则返回默认的 Live/Upcoming
  */
-export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl'): Promise<MatchOdds[]> => {
+export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl', dateString?: string): Promise<MatchOdds[]> => {
   try {
-    const response = await axios.get(`${BASE_URL}/${sportKey}/odds`, {
-      params: {
-        apiKey: API_KEY,
-        regions: 'eu,us', // 获取欧洲和美国的主流博彩公司
-        markets: 'h2h',   // Home 页为了简洁和节省额度，只拉取胜平负
-        oddsFormat: 'decimal',
-      },
-    });
+    const params: any = {
+      apiKey: API_KEY,
+      regions: 'eu,us',
+      markets: 'h2h',
+      oddsFormat: 'decimal',
+    };
+
+    if (dateString) {
+      // 构造当天的 UTC 起止时间 (例如 '2026-06-11T00:00:00Z')
+      params.commenceTimeFrom = dayjs(dateString).startOf('day').utc().format();
+      params.commenceTimeTo = dayjs(dateString).endOf('day').utc().format();
+    }
+
+    const response = await axios.get(`${BASE_URL}/${sportKey}/odds`, { params });
     
     return response.data;
   } catch (error) {

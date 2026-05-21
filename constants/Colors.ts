@@ -1,17 +1,17 @@
-const tintColorLight = '#000000';
-const tintColorDark = '#FFFFFF';
+const tintColorLight = '#8A1538';
+const tintColorDark = '#D4AF37';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    textSecondary: '#8E8E93',
-    background: '#F2F2F7',
+    text: '#111111',
+    textSecondary: '#6E6E73',
+    background: '#F5F5F7',
     cardBackground: '#FFFFFF',
     tint: tintColorLight,
     icon: '#8E8E93',
     tabIconDefault: '#8E8E93',
     tabIconSelected: tintColorLight,
-    accent: '#FF3B30', // Apple Red
+    accent: '#8A1538',
     border: '#E5E5EA',
   },
   dark: {
@@ -23,7 +23,7 @@ export const Colors = {
     icon: '#EBEBF5',
     tabIconDefault: '#8E8E93',
     tabIconSelected: tintColorDark,
-    accent: '#FF453A',
+    accent: '#D4AF37',
     border: '#38383A',
   },
 };
