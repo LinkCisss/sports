@@ -1,7 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 
@@ -27,19 +27,39 @@ export default function TabLayout() {
         tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
         tabBarStyle: {
           position: 'absolute',
+          bottom: Platform.OS === 'ios' ? 30 : 20,
+          left: 20,
+          right: 20,
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+          height: 72, // Increased height to prevent text cut-off
+          borderRadius: 36, // Match height / 2
+          paddingBottom: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.3,
+          shadowRadius: 20,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 10, // Adjust vertical centering
+          paddingBottom: 10, // Push text slightly up from bottom
         },
         tabBarBackground: () => (
-          <BlurView
-            tint={colorScheme === 'dark' ? 'dark' : 'light'}
-            intensity={50}
-            experimentalBlurMethod="dimezisBlurView"
-            style={StyleSheet.absoluteFill}
-          />
+          <View style={{ flex: 1, borderRadius: 36, overflow: 'hidden' }}>
+            <BlurView
+              tint="systemMaterialDark" // Force native dark material for deep, premium glass
+              intensity={80} // Perfect translucency for dark themes
+              experimentalBlurMethod="dimezisBlurView"
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Dark theme border reflection */}
+            <View style={[StyleSheet.absoluteFill, { 
+              borderWidth: 1, 
+              borderColor: 'rgba(255,255,255,0.1)', 
+              borderRadius: 36 
+            }]} />
+          </View>
         ),
         headerStyle: {
           backgroundColor: Colors[colorScheme].background,
