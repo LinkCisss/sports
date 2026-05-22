@@ -28,13 +28,13 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 30 : 20,
-          left: 20,
-          right: 20,
+          left: 36, // Increased from 20 to make the pill shorter horizontally
+          right: 36, // Increased from 20 to make the pill shorter horizontally
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',
-          height: 72, // Increased height to prevent text cut-off
-          borderRadius: 36, // Match height / 2
+          height: 66, // Sleeker height
+          borderRadius: 33, // Match height / 2
           paddingBottom: 0,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 10 },
@@ -42,14 +42,14 @@ export default function TabLayout() {
           shadowRadius: 20,
         },
         tabBarItemStyle: {
-          paddingVertical: 10, // Adjust vertical centering
-          paddingBottom: 10, // Push text slightly up from bottom
+          paddingVertical: 8, // Gentle centering
+          paddingBottom: 6, // Slight push up
         },
         tabBarBackground: () => (
-          <View style={{ flex: 1, borderRadius: 36, overflow: 'hidden' }}>
+          <View style={{ flex: 1, borderRadius: 33, overflow: 'hidden' }}>
             <BlurView
-              tint="systemMaterialDark" // Force native dark material for deep, premium glass
-              intensity={80} // Perfect translucency for dark themes
+              tint="systemMaterialDark"
+              intensity={80}
               experimentalBlurMethod="dimezisBlurView"
               style={StyleSheet.absoluteFill}
             />
@@ -57,7 +57,7 @@ export default function TabLayout() {
             <View style={[StyleSheet.absoluteFill, { 
               borderWidth: 1, 
               borderColor: 'rgba(255,255,255,0.1)', 
-              borderRadius: 36 
+              borderRadius: 33 
             }]} />
           </View>
         ),

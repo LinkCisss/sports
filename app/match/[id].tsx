@@ -100,7 +100,7 @@ export default function MatchDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       {/* Absolute Top Header Area */}
-      <View style={{ backgroundColor: colors.background, paddingTop: 8, paddingBottom: 16, zIndex: 10 }}>
+      <View style={{ backgroundColor: colors.background, paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 8), paddingBottom: 16, zIndex: 10 }}>
         
         {/* Title Bar */}
         <View style={styles.headerTopRow}>
