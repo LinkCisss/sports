@@ -10,6 +10,9 @@ import { formatMatchTime } from '@/utils/date';
 import { getTeamFlagCode } from '@/utils/flags';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import CountryFlag from 'react-native-country-flag';
+import * as WebBrowser from 'expo-web-browser';
+
+const AFFILIATE_LINK = "https://reffpa.com/L?tag=d_5622403m_97c_&site=5622403&ad=97";
 
 export default function MatchDetailScreen() {
   const { id, sportKey } = useLocalSearchParams<{ id: string; sportKey: string }>();
@@ -22,6 +25,10 @@ export default function MatchDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
+
+  const handleBetNow = async () => {
+    await WebBrowser.openBrowserAsync(AFFILIATE_LINK);
+  };
 
   useEffect(() => {
     const loadMatch = async () => {
@@ -95,8 +102,20 @@ export default function MatchDetailScreen() {
           headerTintColor: colors.text,
           headerShadowVisible: false,
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={{ marginRight: 16 }}>
-              <FontAwesome name="chevron-left" size={20} color={colors.text} />
+            <Pressable 
+              onPress={() => router.back()} 
+              style={{ 
+                marginLeft: 16,
+                marginRight: 8,
+                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <FontAwesome name="chevron-left" size={16} color={colors.text} style={{ marginLeft: -2 }} />
             </Pressable>
           ),
         }} 
@@ -148,6 +167,21 @@ export default function MatchDetailScreen() {
         )}
 
       </ScrollView>
+
+      {/* Floating Action Button (Affiliate) */}
+      <View style={[styles.fabContainer, { backgroundColor: colors.background + 'F0' }]}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.fabButton, 
+            { backgroundColor: colors.accent, transform: [{ scale: pressed ? 0.98 : 1 }] },
+            theme === 'light' ? styles.shadowLight : styles.shadowDark
+          ]}
+          onPress={handleBetNow}
+        >
+          <Text style={styles.fabText}>{isZh ? '去 1xBet 投注' : 'Bet at 1xBet'}</Text>
+          <FontAwesome name="external-link" size={16} color="#FFFFFF" style={{ marginLeft: 8 }} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -155,7 +189,7 @@ export default function MatchDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { padding: 16, paddingBottom: 60 },
+  scrollContent: { padding: 16, paddingBottom: 100 },
   matchHeader: {
     alignItems: 'center',
     marginBottom: 24,
@@ -218,5 +252,42 @@ const styles = StyleSheet.create({
   outcomePrice: {
     ...Typography.body,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 30, // Safe area + padding
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(150,150,150,0.1)',
+  },
+  fabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 100, // Pill shape
+  },
+  fabText: {
+    ...Typography.teamName, // Use large bold font
+    color: '#FFFFFF',
+  },
+  shadowLight: {
+    shadowColor: '#FF3B5C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  shadowDark: {
+    shadowColor: '#FF3B5C',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 6,
   },
 });

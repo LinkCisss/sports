@@ -1,12 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, useColorScheme, Pressable } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import CountryFlag from 'react-native-country-flag';
-
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from 'react-i18next';
+import { MatchOdds } from '@/lib/oddsApi';
+import { checkIsFavorite, addFavorite, removeFavorite } from '@/lib/favorites';
 
 interface MatchCardProps {
+  matchData?: MatchOdds; // For saving favorites
   league: string;
   time: string;
   team1: { name: string; score: string | number; flagCode?: string };
@@ -14,11 +17,34 @@ interface MatchCardProps {
   oddsList?: Array<{ providerName: string; team1: number; draw: number; team2: number }>;
 }
 
-export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardProps) {
+export function MatchCard({ matchData, league, time, team1, team2, oddsList }: MatchCardProps) {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
   const isLive = time.includes('LIVE') || time.includes("'");
   const { t } = useTranslation();
+
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    if (matchData) {
+      checkIsFavorite(matchData.id).then(setIsFavorite);
+    }
+  }, [matchData]);
+
+  const toggleFavorite = async (e: any) => {
+    // 阻止事件冒泡，防止点击红心时触发外层的页面跳转
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (e && e.preventDefault) e.preventDefault();
+
+    if (!matchData) return;
+    if (isFavorite) {
+      setIsFavorite(false);
+      await removeFavorite(matchData.id);
+    } else {
+      setIsFavorite(true);
+      await addFavorite(matchData);
+    }
+  };
 
   return (
     <View style={[
@@ -31,9 +57,16 @@ export function MatchCard({ league, time, team1, team2, oddsList }: MatchCardPro
         <View style={[styles.leagueBadge, { backgroundColor: colors.accent + '20' }]}>
           <Text style={[styles.leagueText, { color: colors.accent }]}>{league}</Text>
         </View>
-        <Text style={[styles.timeText, { color: isLive ? colors.accent : colors.textSecondary }]}>
-          {time}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={[styles.timeText, { color: isLive ? colors.accent : colors.textSecondary }]}>
+            {time}
+          </Text>
+          {matchData && (
+            <Pressable onPress={toggleFavorite} hitSlop={15}>
+              <FontAwesome name={isFavorite ? 'heart' : 'heart-o'} size={20} color={isFavorite ? colors.accent : colors.icon} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Teams and Scores */}

@@ -189,6 +189,7 @@ export default function HomeScreen() {
           >
             <Pressable style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
               <MatchCard
+                matchData={match}
                 league={displayLeague(match.sport_title)}
                 time={formatMatchTime(match.commence_time, isZh)}
                 team1={{ 

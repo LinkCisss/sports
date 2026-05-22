@@ -30,11 +30,13 @@ export default function TabLayout() {
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',
+          height: Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
         },
         tabBarBackground: () => (
           <BlurView
             tint={colorScheme === 'dark' ? 'dark' : 'light'}
-            intensity={80}
+            intensity={100}
             style={StyleSheet.absoluteFill}
           />
         ),
@@ -64,10 +66,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="predict"
+        name="favorites"
         options={{
-          title: t('tabs.predict'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="star" color={color} />,
+          title: t('tabs.favorites') || 'Favorites',
+          tabBarIcon: ({ color }) => <TabBarIcon name="heart" color={color} />,
         }}
       />
       <Tabs.Screen

@@ -5,7 +5,7 @@ export const Colors = {
   light: {
     text: '#111111',
     textSecondary: '#8E8E93',
-    background: '#F2F2F7', // Classic Apple Light Gray
+    background: '#F5F5F7', // Cleaner Apple Light Gray
     cardBackground: '#FFFFFF',
     tint: tintColorLight,
     icon: '#8E8E93',
@@ -18,7 +18,7 @@ export const Colors = {
   dark: {
     text: '#FFFFFF',
     textSecondary: '#8E8E93', 
-    background: '#121212', // Deep Dark
+    background: '#0F0F0F', // Deep Dark Ultra Premium
     cardBackground: '#1C1C1E', // Frosted Glass Dark
     tint: tintColorDark,
     icon: '#8E8E93',
