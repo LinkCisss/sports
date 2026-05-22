@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useColorScheme, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useColorScheme, Pressable, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
@@ -20,6 +21,7 @@ export default function MatchDetailScreen() {
   const colors = Colors[theme];
   const { t, i18n } = useTranslation();
   const isZh = i18n.language.startsWith('zh');
+  const insets = useSafeAreaInsets();
 
   const [matchData, setMatchData] = useState<MatchOdds | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,58 +97,53 @@ export default function MatchDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: t('compare.title') || 'Compare', 
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <Pressable 
-              onPress={() => router.back()} 
-              style={{ 
-                marginLeft: 16,
-                marginRight: 8,
-                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <FontAwesome name="chevron-left" size={16} color={colors.text} style={{ marginLeft: -2 }} />
-            </Pressable>
-          ),
-        }} 
-      />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      {/* Absolute Top Header Area */}
+      <View style={{ backgroundColor: colors.background, paddingTop: 8, paddingBottom: 16, zIndex: 10 }}>
         
-        {/* Match Header */}
-        <View style={styles.matchHeader}>
-          <Text style={[styles.time, { color: colors.accent }]}>
-            {formatMatchTime(matchData.commence_time, isZh)}
-          </Text>
-          <View style={styles.teamsRow}>
-            <View style={{ alignItems: 'center', flex: 1, gap: 8 }}>
-              {getTeamFlagCode(matchData.home_team) && (
-                <CountryFlag isoCode={getTeamFlagCode(matchData.home_team)!} size={32} style={{ borderRadius: 4 }} />
-              )}
-              <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2} adjustsFontSizeToFit>
-                {displayTeam(matchData.home_team)}
-              </Text>
+        {/* Title Bar */}
+        <View style={styles.headerTopRow}>
+          <Pressable 
+            onPress={() => router.back()} 
+            style={[styles.backButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+          >
+            <FontAwesome name="chevron-left" size={16} color={colors.text} style={{ marginLeft: -2 }} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{isZh ? '比赛详情' : 'Match Details'}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {/* Hovering Capsule for Teams */}
+        <View style={styles.capsuleContainer}>
+          <View style={[styles.capsule, { backgroundColor: colors.cardBackground }, theme === 'dark' ? styles.shadowDark : styles.shadowLight]}>
+            <View style={styles.horizontalTeams}>
+              <View style={[styles.teamInline, { justifyContent: 'flex-end' }]}>
+                <Text style={[styles.smallTeamName, { color: colors.text, textAlign: 'right' }]} numberOfLines={1}>
+                  {displayTeam(matchData.home_team)}
+                </Text>
+                {getTeamFlagCode(matchData.home_team) && (
+                  <CountryFlag isoCode={getTeamFlagCode(matchData.home_team)!} size={16} style={{ borderRadius: 2 }} />
+                )}
+              </View>
+              <Text style={[styles.vs, { color: colors.accent }]}>vs</Text>
+              <View style={[styles.teamInline, { justifyContent: 'flex-start' }]}>
+                {getTeamFlagCode(matchData.away_team) && (
+                  <CountryFlag isoCode={getTeamFlagCode(matchData.away_team)!} size={16} style={{ borderRadius: 2 }} />
+                )}
+                <Text style={[styles.smallTeamName, { color: colors.text, textAlign: 'left' }]} numberOfLines={1}>
+                  {displayTeam(matchData.away_team)}
+                </Text>
+              </View>
             </View>
-            <Text style={[styles.vs, { color: colors.textSecondary }]}>vs</Text>
-            <View style={{ alignItems: 'center', flex: 1, gap: 8 }}>
-              {getTeamFlagCode(matchData.away_team) && (
-                <CountryFlag isoCode={getTeamFlagCode(matchData.away_team)!} size={32} style={{ borderRadius: 4 }} />
-              )}
-              <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2} adjustsFontSizeToFit>
-                {displayTeam(matchData.away_team)}
-              </Text>
-            </View>
+            <Text style={[styles.time, { color: colors.textSecondary, marginTop: 4 }]}>
+              {formatMatchTime(matchData.commence_time, isZh)}
+            </Text>
           </View>
         </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
 
         {/* Bookmakers List */}
         {matchData.bookmakers.length === 0 ? (
@@ -190,29 +187,61 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 16, paddingBottom: 100 },
-  matchHeader: {
+  headerTopRow: {
+    width: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8, // Give it some breathing room from the top safe area
   },
-  time: {
-    ...Typography.caption,
-    fontWeight: '700',
-    marginBottom: 8,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  teamsRow: {
+  headerTitle: {
+    ...Typography.header,
+  },
+  capsuleContainer: {
+    paddingHorizontal: 20, // More side margin (not touching edges)
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  capsule: {
+    borderRadius: 100, // Pill shape
+    paddingVertical: 18, // Make it taller
+    paddingHorizontal: 24, // Wider internal padding
+    alignItems: 'center',
+    width: '100%',
+  },
+  horizontalTeams: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 16,
   },
-  teamName: {
-    ...Typography.header,
+  teamInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     flex: 1,
-    textAlign: 'center',
+  },
+  smallTeamName: {
+    ...Typography.body,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  time: {
+    ...Typography.caption,
+    fontWeight: '600',
   },
   vs: {
-    ...Typography.body,
+    ...Typography.caption,
     fontWeight: '700',
   },
   bookmakerCard: {

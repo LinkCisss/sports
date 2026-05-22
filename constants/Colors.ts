@@ -1,31 +1,31 @@
-const tintColorLight = '#FF3B5C'; // Elegant Red
-const tintColorDark = '#FF3B5C'; 
+const tintColorLight = '#FF2A55'; // Vibrant Red Accent
+const tintColorDark = '#FF2A55';
 
 export const Colors = {
   light: {
-    text: '#111111',
-    textSecondary: '#8E8E93',
-    background: '#F5F5F7', // Cleaner Apple Light Gray
-    cardBackground: '#FFFFFF',
+    text: '#FFFFFF',
+    textSecondary: '#A5B4CB',
+    background: '#142238', // Deeper, more professional Slate Blue
+    cardBackground: '#1E2F4D', 
     tint: tintColorLight,
-    icon: '#8E8E93',
-    tabIconDefault: '#8E8E93',
+    icon: '#A5B4CB',
+    tabIconDefault: '#94A3B8', // Brighter unselected tab text
     tabIconSelected: tintColorLight,
-    accent: '#FF3B5C',
-    border: '#E5E5EA',
+    accent: '#FF2A55',
+    border: '#2C3E5D',
     gold: '#FFD700',
   },
   dark: {
     text: '#FFFFFF',
-    textSecondary: '#8E8E93', 
-    background: '#0F0F0F', // Deep Dark Ultra Premium
-    cardBackground: '#1C1C1E', // Frosted Glass Dark
+    textSecondary: '#A5B4CB', 
+    background: '#142238',
+    cardBackground: '#1E2F4D',
     tint: tintColorDark,
-    icon: '#8E8E93',
-    tabIconDefault: '#8E8E93',
+    icon: '#A5B4CB',
+    tabIconDefault: '#94A3B8', // Brighter unselected tab text
     tabIconSelected: tintColorDark,
-    accent: '#FF3B5C',
-    border: '#2C2C2E',
+    accent: '#FF2A55',
+    border: '#2C3E5D',
     gold: '#FFD700',
   },
 };

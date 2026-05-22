@@ -47,15 +47,19 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#142238' : '#142238' }}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </SafeAreaView>
     </ThemeProvider>
   );
 }
