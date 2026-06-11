@@ -83,15 +83,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: t('tabs.scores'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="futbol-o" color={color} />,
+          title: t('tabs.scores') || 'Scores',
+          tabBarIcon: ({ color }) => <TabBarIcon name="soccer-ball-o" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          title: t('tabs.schedule') || 'Schedule',
+          tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="compare"
         options={{
-          title: t('tabs.compare'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="bar-chart" color={color} />,
+          title: t('tabs.compare') || 'Compare',
+          tabBarIcon: ({ color }) => <TabBarIcon name="exchange" color={color} />,
         }}
       />
       <Tabs.Screen

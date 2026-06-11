@@ -79,6 +79,11 @@ export const getTeamFlagCode = (teamName: string): string | undefined => {
     "Turkey": "TR",
     "Wales": "GB",
     "Scotland": "GB",
+    "Czech Republic": "CZ",
+    "Czech Rep": "CZ",
+    "Bosnia and Herzegovina": "BA",
+    "Bosnia": "BA",
+    "Haiti": "HT",
     
     // South America
     "Argentina": "AR",

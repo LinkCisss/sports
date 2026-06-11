@@ -64,6 +64,17 @@ const TEAM_DICTIONARY: Record<string, string> = {
   "China": "中国",
   "Australia": "澳大利亚",
   "Saudi Arabia": "沙特阿拉伯",
+  "Czech Republic": "捷克",
+  "Czech Rep": "捷克",
+  "South Africa": "南非",
+  "Qatar": "卡塔尔",
+  "Switzerland": "瑞士",
+  "Haiti": "海地",
+  "Scotland": "苏格兰",
+  "Paraguay": "巴拉圭",
+  "Turkey": "土耳其",
+  "Bosnia and Herzegovina": "波黑",
+  "Bosnia": "波黑",
   
   // fallback for generic draw
   "Draw": "平局"
