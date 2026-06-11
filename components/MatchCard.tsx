@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import CountryFlag from 'react-native-country-flag';
@@ -7,6 +7,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from 'react-i18next';
 import { MatchOdds } from '@/lib/oddsApi';
 import { checkIsFavorite, addFavorite, removeFavorite } from '@/lib/favorites';
+import { useColorScheme } from '@/components/useColorScheme';
+import { BlurView } from 'expo-blur';
 
 interface MatchCardProps {
   matchData?: MatchOdds; // For saving favorites
@@ -49,9 +51,14 @@ export function MatchCard({ matchData, league, time, team1, team2, oddsList }: M
   return (
     <View style={[
       styles.card, 
-      { backgroundColor: colors.cardBackground },
-      theme === 'light' ? styles.shadowLight : styles.shadowDark
+      theme === 'light' ? styles.shadowLight : styles.shadowDark,
+      { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }
     ]}>
+      <BlurView
+        tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'}
+        intensity={60}
+        style={StyleSheet.absoluteFill}
+      />
       {/* Header */}
       <View style={styles.header}>
         <View style={[styles.leagueBadge, { backgroundColor: colors.accent + '20' }]}>
@@ -105,15 +112,15 @@ export function MatchCard({ matchData, league, time, team1, team2, oddsList }: M
                 {t('home.odds_by')}{odds.providerName}
               </Text>
               <View style={styles.oddsBoxes}>
-                <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
+                <View style={[styles.oddBox, { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)', borderWidth: 1, borderColor: colors.border }]}>
                   <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>1</Text>
                   <Text style={[styles.oddValue, { color: colors.text }]}>{odds.team1.toFixed(2)}</Text>
                 </View>
-                <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
+                <View style={[styles.oddBox, { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)', borderWidth: 1, borderColor: colors.border }]}>
                   <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>X</Text>
                   <Text style={[styles.oddValue, { color: colors.text }]}>{odds.draw.toFixed(2)}</Text>
                 </View>
-                <View style={[styles.oddBox, { backgroundColor: colors.background }]}>
+                <View style={[styles.oddBox, { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)', borderWidth: 1, borderColor: colors.border }]}>
                   <Text style={[styles.oddLabel, { color: colors.textSecondary }]}>2</Text>
                   <Text style={[styles.oddValue, { color: colors.text }]}>{odds.team2.toFixed(2)}</Text>
                 </View>

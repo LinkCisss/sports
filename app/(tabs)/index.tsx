@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { Link } from 'expo-router';
 import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
@@ -11,6 +11,8 @@ import { translateTeam, translateLeague } from '@/utils/translate';
 import { formatMatchTime } from '@/utils/date';
 import { getTeamFlagCode } from '@/utils/flags';
 import dayjs from 'dayjs';
+import { useColorScheme } from '@/components/useColorScheme';
+import { LiquidBackground } from '@/components/LiquidBackground';
 
 const LEAGUES = [
   { key: 'soccer_epl', label: 'EPL' },
@@ -28,8 +30,8 @@ export default function HomeScreen() {
   const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
   const displayLeague = (name: string) => isZh ? translateLeague(name) : name;
 
-  const [selectedLeague, setSelectedLeague] = useState(LEAGUES[0].key);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [selectedLeague, setSelectedLeague] = useState('soccer_fifa_world_cup');
+  const [selectedDate, setSelectedDate] = useState('2026-06-11');
   const [matches, setMatches] = useState<MatchOdds[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,74 +111,78 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={[styles.dateText, { color: colors.text }]}>{t('home.today')}</Text>
-      </View>
-
-      {/* Date Switcher */}
+    <View style={{ flex: 1 }}>
+      <LiquidBackground />
       <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.switcher} 
-        contentContainerStyle={styles.switcherContent}
+        style={styles.container}
+        contentContainerStyle={{ paddingTop: 96 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }
       >
-        {dateOptions.map(dateOpt => {
-          const isActive = selectedDate === dateOpt.value;
-          return (
-            <Pressable 
-              key={dateOpt.value}
-              style={[
-                styles.pill, 
-                isActive ? { backgroundColor: colors.accent } : { backgroundColor: colors.cardBackground }
-              ]}
-              onPress={() => setSelectedDate(dateOpt.value)}
-            >
-              <Text style={[
-                styles.pillText, 
-                { color: isActive ? '#fff' : colors.text }
-              ]}>
-                {dateOpt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+        <View style={styles.header}>
+          <Text style={[styles.dateText, { color: colors.text }]}>{t('home.today')}</Text>
+        </View>
 
-      {/* League Switcher */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.switcher} 
-        contentContainerStyle={styles.switcherContent}
-      >
-        {LEAGUES.map(league => {
-          const isActive = selectedLeague === league.key;
-          return (
-            <Pressable 
-              key={league.key}
-              style={[
-                styles.pill, 
-                { borderColor: colors.border, borderWidth: isActive ? 0 : 1 },
-                isActive ? { backgroundColor: colors.text } : { backgroundColor: 'transparent' }
-              ]}
-              onPress={() => handleLeagueChange(league.key)}
-            >
-              <Text style={[
-                styles.pillText, 
-                { color: isActive ? colors.background : colors.textSecondary }
-              ]}>
-                {displayLeague(league.label)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+        {/* Date Switcher */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.switcher} 
+          contentContainerStyle={styles.switcherContent}
+        >
+          {dateOptions.map(dateOpt => {
+            const isActive = selectedDate === dateOpt.value;
+            return (
+              <Pressable 
+                key={dateOpt.value}
+                style={[
+                  styles.pill, 
+                  { borderWidth: 1, borderColor: colors.border },
+                  isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
+                ]}
+                onPress={() => setSelectedDate(dateOpt.value)}
+              >
+                <Text style={[
+                  styles.pillText, 
+                  { color: isActive ? '#fff' : colors.text }
+                ]}>
+                  {dateOpt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* League Switcher */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.switcher} 
+          contentContainerStyle={styles.switcherContent}
+        >
+          {LEAGUES.map(league => {
+            const isActive = selectedLeague === league.key;
+            return (
+              <Pressable 
+                key={league.key}
+                style={[
+                  styles.pill, 
+                  { borderWidth: 1, borderColor: colors.border },
+                  isActive ? { backgroundColor: colors.text } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
+                ]}
+                onPress={() => handleLeagueChange(league.key)}
+              >
+                <Text style={[
+                  styles.pillText, 
+                  { color: isActive ? colors.background : colors.textSecondary }
+                ]}>
+                  {displayLeague(league.label)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       
       {loading ? (
         <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />
@@ -216,7 +222,8 @@ export default function HomeScreen() {
       )}
       
       <View style={{ height: 100 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

@@ -31,7 +31,7 @@ const initI18n = async () => {
         escapeValue: false, // React 已经自带 XSS 防护
       },
       compatibilityJSON: 'v3', // 解决 Android 端的一些兼容性问题
-    });
+    } as any);
 };
 
 initI18n();

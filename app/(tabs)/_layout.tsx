@@ -28,46 +28,54 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 30 : 20,
-          left: 36, // Increased from 20 to make the pill shorter horizontally
-          right: 36, // Increased from 20 to make the pill shorter horizontally
+          left: 36,
+          right: 36,
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',
-          height: 66, // Sleeker height
-          borderRadius: 33, // Match height / 2
+          height: 66,
+          borderRadius: 33,
           paddingBottom: 0,
-          shadowColor: '#000',
+          shadowColor: colorScheme === 'dark' ? '#000' : '#8A99AD',
           shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.3,
+          shadowOpacity: colorScheme === 'dark' ? 0.35 : 0.15,
           shadowRadius: 20,
         },
         tabBarItemStyle: {
-          paddingVertical: 8, // Gentle centering
-          paddingBottom: 6, // Slight push up
+          paddingVertical: 8,
+          paddingBottom: 6,
         },
         tabBarBackground: () => (
           <View style={{ flex: 1, borderRadius: 33, overflow: 'hidden' }}>
             <BlurView
-              tint="systemMaterialDark"
+              tint={colorScheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
               intensity={80}
               experimentalBlurMethod="dimezisBlurView"
               style={StyleSheet.absoluteFill}
             />
-            {/* Dark theme border reflection */}
+            {/* Glass border reflection */}
             <View style={[StyleSheet.absoluteFill, { 
               borderWidth: 1, 
-              borderColor: 'rgba(255,255,255,0.1)', 
+              borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', 
               borderRadius: 33 
             }]} />
           </View>
         ),
         headerStyle: {
-          backgroundColor: Colors[colorScheme].background,
-          shadowOpacity: 0,
-          elevation: 0,
+          backgroundColor: 'transparent',
         },
+        headerBackground: () => (
+          <BlurView
+            tint={colorScheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
+            intensity={80}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
+        headerTransparent: true,
         headerTitleStyle: {
-          fontWeight: '700',
+          fontWeight: '800',
+          fontSize: 18,
+          letterSpacing: 0.3,
         },
         headerTintColor: Colors[colorScheme].text,
         headerShown: useClientOnlyValue(false, true),

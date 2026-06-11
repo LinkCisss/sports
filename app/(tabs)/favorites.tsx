@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { Link, useFocusEffect } from 'expo-router';
 import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
@@ -10,6 +10,8 @@ import { formatMatchTime } from '@/utils/date';
 import { getTeamFlagCode } from '@/utils/flags';
 import { MatchOdds } from '@/lib/oddsApi';
 import { getFavorites } from '@/lib/favorites';
+import { useColorScheme } from '@/components/useColorScheme';
+import { LiquidBackground } from '@/components/LiquidBackground';
 
 export default function FavoritesScreen() {
   const theme = useColorScheme() ?? 'light';
@@ -43,13 +45,16 @@ export default function FavoritesScreen() {
   }, []);
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.titleText, { color: colors.text }]}>{t('tabs.favorites') || 'Favorites'}</Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <LiquidBackground />
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingTop: 96 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.titleText, { color: colors.text }]}>{t('tabs.favorites') || 'Favorites'}</Text>
+        </View>
       
       {loading ? (
         <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />
@@ -75,7 +80,8 @@ export default function FavoritesScreen() {
         </View>
       )}
       <View style={{ height: 120 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

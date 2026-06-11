@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,7 +8,7 @@ import 'react-native-reanimated';
 
 import '../lib/i18n'; // <-- 引入 i18n 配置
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { ThemeProvider as AppThemeProvider, useColorScheme } from '@/components/useColorScheme';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -50,14 +50,22 @@ export default function RootLayout() {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function RootLayoutNav() {
+  return (
+    <AppThemeProvider>
+      <InnerLayout />
+    </AppThemeProvider>
+  );
+}
+
+function InnerLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
-    </ThemeProvider>
+    </NavThemeProvider>
   );
 }

@@ -1,14 +1,19 @@
 import React from 'react';
-import { StyleSheet, ScrollView, View, Text, useColorScheme, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, Pressable } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useColorScheme, useAppTheme } from '@/components/useColorScheme';
+import { LiquidBackground } from '@/components/LiquidBackground';
+import { BlurView } from 'expo-blur';
 
 export default function ProfileScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
+  const { themeMode, setThemeMode } = useAppTheme();
   const { t, i18n } = useTranslation();
+  const isZh = i18n.language.startsWith('zh');
 
   const toggleLanguage = async () => {
     const nextLang = i18n.language === 'zh' ? 'en' : 'zh';
@@ -17,29 +22,110 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('profile.title')}</Text>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]} />
-        <Text style={[styles.userName, { color: colors.text }]}>{t('profile.guest_user')}</Text>
-        <Text style={[styles.stats, { color: colors.textSecondary }]}>{t('profile.stats')}</Text>
-      </View>
-
-      <View style={[styles.settingsCard, { backgroundColor: colors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('profile.settings')}</Text>
-        <View style={styles.settingItem}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('profile.language')}</Text>
-          <Pressable onPress={toggleLanguage} style={[styles.button, { backgroundColor: colors.background }]}>
-            <Text style={[styles.buttonText, { color: colors.text }]}>
-              {i18n.language === 'zh' ? t('profile.chinese') : t('profile.english')}
-            </Text>
-          </Pressable>
+    <View style={{ flex: 1 }}>
+      <LiquidBackground />
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingTop: 96 }}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>{t('profile.title')}</Text>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* User Stats Card */}
+        <View style={[
+          styles.card, 
+          { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border }
+        ]}>
+          <BlurView 
+            tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} 
+            intensity={60} 
+            style={StyleSheet.absoluteFill} 
+          />
+          <View style={[styles.avatarPlaceholder, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)' }]} />
+          <Text style={[styles.userName, { color: colors.text }]}>{t('profile.guest_user')}</Text>
+          <Text style={[styles.stats, { color: colors.textSecondary }]}>{t('profile.stats')}</Text>
+        </View>
+
+        {/* Settings Card */}
+        <View style={[
+          styles.settingsCard, 
+          { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border }
+        ]}>
+          <BlurView 
+            tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} 
+            intensity={60} 
+            style={StyleSheet.absoluteFill} 
+          />
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('profile.settings')}</Text>
+          
+          {/* Language Setting */}
+          <View style={styles.settingItem}>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('profile.language')}</Text>
+            <Pressable 
+              onPress={toggleLanguage} 
+              style={[
+                styles.button, 
+                { 
+                  backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)', 
+                  borderWidth: 1, 
+                  borderColor: colors.border 
+                }
+              ]}
+            >
+              <Text style={[styles.buttonText, { color: colors.text }]}>
+                {i18n.language === 'zh' ? t('profile.chinese') : t('profile.english')}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Theme Mode Setting */}
+          <View style={[styles.settingItem, { marginTop: 20 }]}>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{isZh ? '主题设置' : 'Theme'}</Text>
+            <View 
+              style={[
+                styles.themeSelector, 
+                { 
+                  backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+                  borderColor: colors.border
+                }
+              ]}
+            >
+              {(['light', 'dark', 'auto'] as const).map((mode) => {
+                const isActive = themeMode === mode;
+                const modeLabel = {
+                  light: isZh ? '浅色' : 'Light',
+                  dark: isZh ? '深色' : 'Dark',
+                  auto: isZh ? '自动' : 'Auto',
+                }[mode];
+
+                return (
+                  <Pressable
+                    key={mode}
+                    onPress={() => setThemeMode(mode)}
+                    style={[
+                      styles.themeTab,
+                      isActive ? { backgroundColor: colors.accent } : { backgroundColor: 'transparent' }
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.themeTabText,
+                        { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                      ]}
+                    >
+                      {modeLabel}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+        
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -49,17 +135,24 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
+    paddingBottom: 8,
   },
   title: {
     ...Typography.header,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 24,
     marginHorizontal: 16,
     marginTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   avatarPlaceholder: {
     width: 80,
@@ -75,10 +168,16 @@ const styles = StyleSheet.create({
     ...Typography.body,
   },
   settingsCard: {
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 24,
     marginHorizontal: 16,
     marginTop: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   sectionTitle: {
     ...Typography.caption,
@@ -92,14 +191,33 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     ...Typography.body,
+    fontWeight: '600',
   },
   button: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   buttonText: {
     ...Typography.caption,
     fontWeight: '700',
+  },
+  themeSelector: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    padding: 2,
+    borderWidth: 1,
+  },
+  themeTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  themeTabText: {
+    ...Typography.caption,
+    fontWeight: '700',
+    fontSize: 12,
   },
 });

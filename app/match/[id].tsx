@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useColorScheme, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
@@ -12,6 +12,9 @@ import { getTeamFlagCode } from '@/utils/flags';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import CountryFlag from 'react-native-country-flag';
 import * as WebBrowser from 'expo-web-browser';
+import { useColorScheme } from '@/components/useColorScheme';
+import { LiquidBackground } from '@/components/LiquidBackground';
+import { BlurView } from 'expo-blur';
 
 const AFFILIATE_LINK = "https://reffpa.com/L?tag=d_5622403m_97c_&site=5622403&ad=97";
 
@@ -79,7 +82,7 @@ export default function MatchDetailScreen() {
             }
 
             return (
-              <View key={idx} style={[styles.outcomeBox, { backgroundColor: colors.background }]}>
+              <View key={idx} style={[styles.outcomeBox, { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)', borderWidth: 1, borderColor: colors.border }]}>
                 <Text style={[styles.outcomeName, { color: colors.textSecondary }]} numberOfLines={1}>
                   {nameDisplay}
                   {outcome.point !== undefined ? ` (${outcome.point > 0 ? '+' : ''}${outcome.point})` : ''}
@@ -96,11 +99,28 @@ export default function MatchDetailScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      <LiquidBackground />
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* Absolute Top Header Area */}
-      <View style={{ backgroundColor: colors.background, paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 8), paddingBottom: 16, zIndex: 10 }}>
+      {/* Truly Absolute Glass Top Header Area */}
+      <View style={{ 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 8), 
+        paddingBottom: 16, 
+        zIndex: 10,
+        overflow: 'hidden',
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border
+      }}>
+        <BlurView 
+          tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} 
+          intensity={85} 
+          style={StyleSheet.absoluteFill} 
+        />
         
         {/* Title Bar */}
         <View style={styles.headerTopRow}>
@@ -116,7 +136,12 @@ export default function MatchDetailScreen() {
 
         {/* Hovering Capsule for Teams */}
         <View style={styles.capsuleContainer}>
-          <View style={[styles.capsule, { backgroundColor: colors.cardBackground }, theme === 'dark' ? styles.shadowDark : styles.shadowLight]}>
+          <View style={[
+            styles.capsule, 
+            { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }, 
+            theme === 'dark' ? styles.shadowDark : styles.shadowLight
+          ]}>
+            <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={20} style={StyleSheet.absoluteFill} />
             <View style={styles.horizontalTeams}>
               <View style={[styles.teamInline, { justifyContent: 'flex-end' }]}>
                 <Text style={[styles.smallTeamName, { color: colors.text, textAlign: 'right' }]} numberOfLines={1}>
@@ -143,7 +168,7 @@ export default function MatchDetailScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 165 }]}>
 
         {/* Bookmakers List */}
         {matchData.bookmakers.length === 0 ? (
@@ -152,7 +177,11 @@ export default function MatchDetailScreen() {
           </Text>
         ) : (
           matchData.bookmakers.map(bookmaker => (
-            <View key={bookmaker.key} style={[styles.bookmakerCard, { backgroundColor: colors.cardBackground }]}>
+            <View key={bookmaker.key} style={[
+              styles.bookmakerCard, 
+              { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }
+            ]}>
+              <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
               <Text style={[styles.bookmakerTitle, { color: colors.text }]}>{bookmaker.title}</Text>
               
               {renderMarket(bookmaker, 'h2h', isZh ? '胜平负 (Moneyline)' : 'Moneyline (H2H)')}
@@ -166,7 +195,16 @@ export default function MatchDetailScreen() {
       </ScrollView>
 
       {/* Floating Action Button (Affiliate) */}
-      <View style={[styles.fabContainer, { backgroundColor: colors.background + 'F0' }]}>
+      <View style={[
+        styles.fabContainer, 
+        { 
+          backgroundColor: 'transparent', 
+          borderTopWidth: 1, 
+          borderTopColor: colors.border,
+          overflow: 'hidden' 
+        }
+      ]}>
+        <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={80} style={StyleSheet.absoluteFill} />
         <Pressable 
           style={({ pressed }) => [
             styles.fabButton, 

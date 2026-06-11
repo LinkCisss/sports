@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, View, Text, useColorScheme, ActivityIndicator, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable } from 'react-native';
 import { Link } from 'expo-router';
 import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
@@ -9,6 +9,9 @@ import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { translateTeam, translateLeague } from '@/utils/translate';
 import { formatMatchTime } from '@/utils/date';
 import { getTeamFlagCode } from '@/utils/flags';
+import { useColorScheme } from '@/components/useColorScheme';
+import { LiquidBackground } from '@/components/LiquidBackground';
+import { BlurView } from 'expo-blur';
 
 export default function CompareScreen() {
   const theme = useColorScheme() ?? 'light';
@@ -33,13 +36,18 @@ export default function CompareScreen() {
   }, []);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('compare.title')}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {t('compare.subtitle')}
-        </Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <LiquidBackground />
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingTop: 96 }}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>{t('compare.title')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {t('compare.subtitle')}
+          </Text>
+        </View>
 
       {loading ? (
         <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />
@@ -71,14 +79,19 @@ export default function CompareScreen() {
           </Link>
         ))
       ) : (
-        <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-          <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+        <View style={[
+          styles.card, 
+          { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }
+        ]}>
+          <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={50} style={StyleSheet.absoluteFill} />
+          <Text style={[styles.placeholderText, { color: colors.textSecondary, zIndex: 1 }]}>
             {t('home.no_matches')}
           </Text>
         </View>
       )}
       <View style={{ height: 100 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
