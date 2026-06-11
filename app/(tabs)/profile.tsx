@@ -7,6 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, useAppTheme } from '@/components/useColorScheme';
 import { LiquidBackground } from '@/components/LiquidBackground';
 import { BlurView } from 'expo-blur';
+import { router } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 export default function ProfileScreen() {
   const theme = useColorScheme() ?? 'light';
@@ -45,6 +47,34 @@ export default function ProfileScreen() {
           <View style={[styles.avatarPlaceholder, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)' }]} />
           <Text style={[styles.userName, { color: colors.text }]}>{t('profile.guest_user')}</Text>
           <Text style={[styles.stats, { color: colors.textSecondary }]}>{t('profile.stats')}</Text>
+        </View>
+
+        {/* Features Card */}
+        <View style={[
+          styles.settingsCard, 
+          { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border }
+        ]}>
+          <BlurView 
+            tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} 
+            intensity={60} 
+            style={StyleSheet.absoluteFill} 
+          />
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{isZh ? '常用功能' : 'Features'}</Text>
+          
+          {/* Favorites Link */}
+          <Pressable 
+            onPress={() => router.push('/(tabs)/favorites')} 
+            style={({ pressed }) => [
+              styles.featureItem,
+              pressed && { opacity: 0.7 }
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FontAwesome name="heart" size={16} color={colors.accent || '#FF6B6B'} style={{ marginRight: 12 }} />
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{isZh ? '我的收藏' : 'My Favorites'}</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={14} color={colors.textSecondary} />
+          </Pressable>
         </View>
 
         {/* Settings Card */}
@@ -219,5 +249,11 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     fontWeight: '700',
     fontSize: 12,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
   },
 });

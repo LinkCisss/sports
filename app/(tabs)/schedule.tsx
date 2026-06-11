@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable, Platform } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable, Platform, Dimensions } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -11,7 +11,11 @@ import { translateTeam } from '@/utils/translate';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { fetchWorldCupStandings, fetchWorldCupMatches, FootballDataMatch, GroupStanding } from '@/lib/footballDataApi';
+import { fetchLiveMatchesWithOdds } from '@/lib/oddsApi';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Knockout matches mock database matching the tournament format
 const KNOCKOUT_MATCHES_BY_STAGE: Record<string, any[]> = {
@@ -56,6 +60,36 @@ const STAGES = [
   { key: 'FINAL', labelZh: '决赛', labelEn: 'Final' },
 ];
 
+const TEAM_FLAG_COLORS: Record<string, string[]> = {
+  "Mexico": ["#006847", "#CE1126"],
+  "South Africa": ["#007C3F", "#FFB612"],
+  "South Korea": ["#CD2E3A", "#0047A0"],
+  "Czech Republic": ["#11457E", "#D7141A"],
+  "Czech Rep": ["#11457E", "#D7141A"],
+  "Canada": ["#FF0000", "#FFFFFF"],
+  "Bosnia and Herzegovina": ["#002F6C", "#FEC524"],
+  "Bosnia": ["#002F6C", "#FEC524"],
+  "USA": ["#B22234", "#3C3B6E"],
+  "Paraguay": ["#D52B1E", "#0038A8"],
+  "Switzerland": ["#FF0000", "#FFFFFF"],
+  "Qatar": ["#8A1538", "#FFFFFF"],
+  "Turkey": ["#E30A17", "#FFFFFF"],
+  "Brazil": ["#009739", "#FEDF00"],
+  "Argentina": ["#74ACDF", "#F6B40E"],
+  "Germany": ["#FFCE00", "#DD0000"],
+  "France": ["#002395", "#ED2939"],
+  "England": ["#CE1126", "#FFFFFF"],
+  "Spain": ["#C60B1E", "#FFC400"],
+  "Portugal": ["#006600", "#FF0000"],
+  "Italy": ["#009246", "#CE2B37"],
+  "Japan": ["#BC002D", "#FFFFFF"],
+  "Australia": ["#00008B", "#FF0000"],
+};
+
+const getTeamColors = (teamName: string): string[] => {
+  return TEAM_FLAG_COLORS[teamName] || ['#3A86FF', '#8338EC'];
+};
+
 export default function ScheduleScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
@@ -64,10 +98,66 @@ export default function ScheduleScreen() {
 
   const [selectedStage, setSelectedStage] = useState('GROUP_STAGE');
   const [groupSubTab, setGroupSubTab] = useState<'standings' | 'matches'>('standings'); // Standings vs Match Schedule
+  const [showStandingsModal, setShowStandingsModal] = useState(false); // Standings Overlay
+  const [selectedDetailMatch, setSelectedDetailMatch] = useState<FootballDataMatch | null>(null); // Interactive Match Detail
+  const [realOdds, setRealOdds] = useState<{ homeOdds: string; drawOdds: string; awayOdds: string } | null>(null);
+  const [loadingOdds, setLoadingOdds] = useState(false);
 
   const [standings, setStandings] = useState<GroupStanding[]>([]);
   const [groupMatches, setGroupMatches] = useState<FootballDataMatch[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Shared values for modal PK background blobs
+  const pkScale1 = useSharedValue(1);
+  const pkTx1 = useSharedValue(0);
+  const pkTy1 = useSharedValue(0);
+
+  const pkScale2 = useSharedValue(1);
+  const pkTx2 = useSharedValue(0);
+  const pkTy2 = useSharedValue(0);
+
+  const pkAnimatedBlob1 = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pkTx1.value },
+      { translateY: pkTy1.value },
+      { scale: pkScale1.value }
+    ],
+  }));
+
+  const pkAnimatedBlob2 = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pkTx2.value },
+      { translateY: pkTy2.value },
+      { scale: pkScale2.value }
+    ],
+  }));
+
+  // Helper to determine the active tournament stage based on dates
+  const determineActiveStage = (matches: FootballDataMatch[]) => {
+    if (!matches || matches.length === 0) return 'GROUP_STAGE';
+    const now = dayjs();
+    let closestMatch: FootballDataMatch | null = null;
+    let minDiff = Infinity;
+    
+    matches.forEach(m => {
+      const diff = Math.abs(dayjs(m.utcDate).diff(now));
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestMatch = m;
+      }
+    });
+    
+    if (closestMatch) {
+      const stage = (closestMatch as FootballDataMatch).stage;
+      if (stage === 'GROUP_STAGE') return 'GROUP_STAGE';
+      if (stage === 'LAST_32' || stage === 'ROUND_OF_32') return 'ROUND_OF_32';
+      if (stage === 'LAST_16' || stage === 'ROUND_OF_16') return 'ROUND_OF_16';
+      if (stage === 'QUARTER_FINALS') return 'QUARTER_FINALS';
+      if (stage === 'SEMI_FINALS') return 'SEMI_FINALS';
+      if (stage === 'FINAL') return 'FINAL';
+    }
+    return 'GROUP_STAGE';
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -83,6 +173,10 @@ export default function ScheduleScreen() {
           // Filter out group stage matches specifically
           const groupFixtures = matchesRes.matches.filter(m => m.stage === 'GROUP_STAGE');
           setGroupMatches(groupFixtures);
+          
+          // Auto-select the active stage based on tournament progression dates
+          const active = determineActiveStage(matchesRes.matches);
+          setSelectedStage(active);
         }
       } catch (err) {
         console.error('Error loading schedule data:', err);
@@ -93,9 +187,85 @@ export default function ScheduleScreen() {
     loadData();
   }, []);
 
-  // Format date and time
+  // Animate PK details screen blobs when match is selected & load real odds
+  useEffect(() => {
+    if (selectedDetailMatch) {
+      pkScale1.value = 1;
+      pkTx1.value = 0;
+      pkTy1.value = 0;
+      pkScale2.value = 1;
+      pkTx2.value = 0;
+      pkTy2.value = 0;
+
+      pkScale1.value = withRepeat(withTiming(1.35, { duration: 6500 }), -1, true);
+      pkTx1.value = withRepeat(withTiming(SCREEN_WIDTH * 0.18, { duration: 8000 }), -1, true);
+      pkTy1.value = withRepeat(withTiming(SCREEN_HEIGHT * 0.08, { duration: 9000 }), -1, true);
+
+      pkScale2.value = withRepeat(withTiming(1.28, { duration: 6000 }), -1, true);
+      pkTx2.value = withRepeat(withTiming(-SCREEN_WIDTH * 0.18, { duration: 7500 }), -1, true);
+      pkTy2.value = withRepeat(withTiming(-SCREEN_HEIGHT * 0.08, { duration: 8500 }), -1, true);
+
+      // Fetch real odds dynamically
+      const loadRealOdds = async () => {
+        setLoadingOdds(true);
+        setRealOdds(null);
+        try {
+          const homeName = selectedDetailMatch.homeTeam.name.toLowerCase();
+          const awayName = selectedDetailMatch.awayTeam.name.toLowerCase();
+
+          // Fetch matches from The Odds API for FIFA World Cup
+          const oddsEvents = await fetchLiveMatchesWithOdds('soccer_fifa_world_cup');
+          
+          // Find matching event
+          const matched = oddsEvents.find(o => {
+            const apiHome = o.home_team.toLowerCase();
+            const apiAway = o.away_team.toLowerCase();
+            
+            return (
+              (apiHome.includes(homeName) || homeName.includes(apiHome)) &&
+              (apiAway.includes(awayName) || awayName.includes(apiAway))
+            ) || (
+              (apiHome.includes(awayName) || awayName.includes(apiHome)) &&
+              (apiAway.includes(homeName) || homeName.includes(apiAway))
+            );
+          });
+
+          if (matched && matched.bookmakers && matched.bookmakers.length > 0) {
+            // Find first bookmaker with h2h market
+            const bookmaker = matched.bookmakers[0];
+            const market = bookmaker.markets.find(m => m.key === 'h2h');
+            if (market && market.outcomes) {
+              const homeOutcome = market.outcomes.find(o => o.name.toLowerCase() === matched.home_team.toLowerCase());
+              const awayOutcome = market.outcomes.find(o => o.name.toLowerCase() === matched.away_team.toLowerCase());
+              const drawOutcome = market.outcomes.find(o => o.name.toLowerCase() === 'draw' || o.name.toLowerCase() === '平局');
+
+              if (homeOutcome && awayOutcome) {
+                const homeTla = selectedDetailMatch.homeTeam.tla || homeOutcome.name.substring(0, 3).toUpperCase();
+                const awayTla = selectedDetailMatch.awayTeam.tla || awayOutcome.name.substring(0, 3).toUpperCase();
+                
+                setRealOdds({
+                  homeOdds: `${homeTla} ${homeOutcome.price.toFixed(2)}`,
+                  drawOdds: isZh ? `平局 ${drawOutcome ? drawOutcome.price.toFixed(2) : '-'}` : `Draw ${drawOutcome ? drawOutcome.price.toFixed(2) : '-'}`,
+                  awayOdds: `${awayTla} ${awayOutcome.price.toFixed(2)}`
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error matching real odds:', err);
+        } finally {
+          setLoadingOdds(false);
+        }
+      };
+      loadRealOdds();
+    } else {
+      setRealOdds(null);
+    }
+  }, [selectedDetailMatch]);
+
+  // Format date and time (FORCED TO CHINA STANDARD TIME / UTC+8)
   const formatUtcDate = (utcDate: string) => {
-    const d = dayjs(utcDate);
+    const d = dayjs(utcDate).utcOffset(8);
     if (isZh) {
       const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
       return `${d.month() + 1}月${d.date()}日 ${weekdays[d.day()]}`;
@@ -104,7 +274,7 @@ export default function ScheduleScreen() {
   };
 
   const formatUtcTime = (utcDate: string) => {
-    const d = dayjs(utcDate);
+    const d = dayjs(utcDate).utcOffset(8);
     const hour = d.hour();
     const minute = d.minute().toString().padStart(2, '0');
     if (isZh) {
@@ -139,9 +309,19 @@ export default function ScheduleScreen() {
     return isZh ? `${letter}组` : `Group ${letter}`;
   };
 
+  const getStageText = (stage: string) => {
+    if (stage === 'GROUP_STAGE') return isZh ? '小组赛 · 第1场' : 'Group Stage · Match 1';
+    if (stage === 'ROUND_OF_32') return isZh ? '32强淘汰赛' : 'Round of 32';
+    if (stage === 'ROUND_OF_16') return isZh ? '16强淘汰赛' : 'Round of 16';
+    if (stage === 'QUARTER_FINALS') return isZh ? '1/4 决赛' : 'Quarter-finals';
+    if (stage === 'SEMI_FINALS') return isZh ? '半决赛' : 'Semi-finals';
+    if (stage === 'FINAL') return isZh ? '决赛' : 'Final';
+    return stage;
+  };
+
   // Render Standings
-  const renderStandings = () => (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+  const renderStandings = (inModal: boolean = false) => (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, inModal && { paddingTop: 4 }]}>
       {standings.map((group) => (
         <View key={group.group} style={[styles.glassCard, { borderColor: colors.border }]}>
           <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
@@ -207,7 +387,15 @@ export default function ScheduleScreen() {
             const awayFlag = getTeamFlagCode(match.awayTeam.name);
             
             return (
-              <View key={match.id} style={[styles.matchCard, { borderColor: colors.border }]}>
+              <Pressable 
+                key={match.id} 
+                onPress={() => setSelectedDetailMatch(match)}
+                style={({ pressed }) => [
+                  styles.matchCard, 
+                  { borderColor: colors.border },
+                  pressed && { opacity: 0.85 }
+                ]}
+              >
                 <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
                 
                 {/* Match sub-header */}
@@ -259,7 +447,7 @@ export default function ScheduleScreen() {
                     <Text style={[styles.recordText, { color: colors.textSecondary }]}>0-0-0</Text>
                   </View>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -267,6 +455,29 @@ export default function ScheduleScreen() {
       <View style={{ height: 120 }} />
     </ScrollView>
   );
+
+  // Render bracket placeholder / seed badge inside knockout circles
+  const renderPlaceholderBadge = (name: string) => {
+    // If it's a real team name, show flag
+    const flag = getTeamFlagCode(name);
+    if (flag) {
+      return <CountryFlag isoCode={flag} size={14} style={[styles.flagIcon, { marginLeft: 0, marginRight: 10 }]} />;
+    }
+    
+    // Otherwise it's a qualifier label (e.g. 1A, 2B, 3A/B/C/D/F)
+    let display = name;
+    if (name.includes('/')) {
+      const match = name.match(/^(\d)/);
+      display = match ? `${match[1]}rd` : '?';
+    }
+    return (
+      <View style={[styles.placeholderBadge, { backgroundColor: colors.border }]}>
+        <Text style={[styles.placeholderBadgeText, { color: colors.textSecondary, fontSize: 9, fontWeight: '800' }]}>
+          {display}
+        </Text>
+      </View>
+    );
+  };
 
   // Render Knockout Bracket Match list
   const renderKnockouts = () => {
@@ -277,7 +488,29 @@ export default function ScheduleScreen() {
           const isEven = idx % 2 === 0;
           return (
             <View key={item.id} style={styles.bracketWrapper}>
-              <View style={[styles.bracketMatchCard, { borderColor: colors.border }]}>
+              <Pressable 
+                onPress={() => {
+                  const matchData: FootballDataMatch = {
+                    id: item.id,
+                    utcDate: item.date,
+                    status: 'TIMED',
+                    matchday: 2,
+                    stage: selectedStage,
+                    group: null,
+                    lastUpdated: '',
+                    homeTeam: { id: 0, name: item.home, shortName: item.home, tla: item.home, crest: '' },
+                    awayTeam: { id: 0, name: item.away, shortName: item.away, tla: item.away, crest: '' },
+                    score: { winner: null, duration: 'REGULAR', fullTime: { home: null, away: null }, halfTime: { home: null, away: null } },
+                    odds_win_rate: item.odds
+                  };
+                  setSelectedDetailMatch(matchData);
+                }}
+                style={({ pressed }) => [
+                  styles.bracketMatchCard, 
+                  { borderColor: colors.border },
+                  pressed && { opacity: 0.85 }
+                ]}
+              >
                 <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
                 
                 {/* Date header */}
@@ -289,11 +522,7 @@ export default function ScheduleScreen() {
                 <View style={styles.bracketTeamsContainer}>
                   {/* Home Placeholder / Team */}
                   <View style={styles.bracketTeamRow}>
-                    <View style={[styles.placeholderBadge, { backgroundColor: colors.border }]}>
-                      <Text style={[styles.placeholderBadgeText, { color: colors.textSecondary }]}>
-                        {item.home.startsWith('W') || item.home.match(/^\d/) ? '' : '🏳️'}
-                      </Text>
-                    </View>
+                    {renderPlaceholderBadge(item.home)}
                     <Text style={[styles.bracketTeamName, { color: colors.text }]}>
                       {item.home}
                     </Text>
@@ -301,11 +530,7 @@ export default function ScheduleScreen() {
 
                   {/* Away Placeholder / Team */}
                   <View style={[styles.bracketTeamRow, { marginTop: 12 }]}>
-                    <View style={[styles.placeholderBadge, { backgroundColor: colors.border }]}>
-                      <Text style={[styles.placeholderBadgeText, { color: colors.textSecondary }]}>
-                        {item.away.startsWith('W') || item.away.match(/^\d/) ? '' : '🏳️'}
-                      </Text>
-                    </View>
+                    {renderPlaceholderBadge(item.away)}
                     <Text style={[styles.bracketTeamName, { color: colors.text }]}>
                       {item.away}
                     </Text>
@@ -318,7 +543,7 @@ export default function ScheduleScreen() {
                     {item.odds}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
 
               {/* Bracket fork line connectors (Mocking flowchart links) */}
               {selectedStage !== 'FINAL' && (
@@ -353,6 +578,187 @@ export default function ScheduleScreen() {
     );
   };
 
+  // Render Interactive Match Detail Modal
+  const renderMatchDetailModal = () => {
+    if (!selectedDetailMatch) return null;
+    
+    const homeName = selectedDetailMatch.homeTeam.name;
+    const awayName = selectedDetailMatch.awayTeam.name;
+    const homeFlag = getTeamFlagCode(homeName);
+    const awayFlag = getTeamFlagCode(awayName);
+    
+    // Flag Colors for dynamic PK background
+    const homeColors = getTeamColors(homeName);
+    const awayColors = getTeamColors(awayName);
+    const leftBlobColor = homeColors[0];
+    const rightBlobColor = awayColors[0];
+
+    // Find standings for this match's group if applicable
+    const groupStanding = standings.find(s => s.group === selectedDetailMatch.group);
+
+    return (
+      <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
+        {/* Dynamic Fluid PK Background */}
+        <View style={styles.pkBackgroundContainer}>
+          <Animated.View style={[
+            styles.pkBlobLeft, 
+            { backgroundColor: leftBlobColor },
+            pkAnimatedBlob1
+          ]} />
+          <Animated.View style={[
+            styles.pkBlobRight, 
+            { backgroundColor: rightBlobColor },
+            pkAnimatedBlob2
+          ]} />
+          <BlurView tint="dark" intensity={65} style={StyleSheet.absoluteFill} />
+        </View>
+
+        {/* Back button */}
+        <View style={[styles.pkHeaderRow, { paddingTop: Platform.OS === 'ios' ? 64 : 54 }]}>
+          <Pressable 
+            onPress={() => setSelectedDetailMatch(null)} 
+            style={styles.pkIconBtn}
+          >
+            <FontAwesome name="chevron-left" size={18} color="#FFFFFF" />
+          </Pressable>
+        </View>
+
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.pkScrollContent}
+        >
+          {/* Stage name */}
+          <Text style={styles.pkStageTitle}>
+            {getStageText(selectedDetailMatch.stage)}
+          </Text>
+
+          {/* PK Duel Header */}
+          <View style={styles.pkMainRow}>
+            {/* Home Team */}
+            <View style={styles.pkTeamCol}>
+              <View style={styles.largeFlagWrapper}>
+                {homeFlag ? (
+                  <CountryFlag isoCode={homeFlag} size={70} style={styles.largeFlag} />
+                ) : (
+                  <View style={styles.largeFlagPlaceholder}>
+                    <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700' }}>{homeName.substring(0, 2)}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.pkTeamName} numberOfLines={1}>
+                {isZh ? translateTeam(homeName) : homeName}
+              </Text>
+            </View>
+
+            {/* Time / Score Center */}
+            <View style={styles.pkTimeCol}>
+              <Text style={styles.pkTimeText}>
+                {formatUtcTime(selectedDetailMatch.utcDate)}
+              </Text>
+            </View>
+
+            {/* Away Team */}
+            <View style={styles.pkTeamCol}>
+              <View style={styles.largeFlagWrapper}>
+                {awayFlag ? (
+                  <CountryFlag isoCode={awayFlag} size={70} style={styles.largeFlag} />
+                ) : (
+                  <View style={styles.largeFlagPlaceholder}>
+                    <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700' }}>{awayName.substring(0, 2)}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.pkTeamName} numberOfLines={1}>
+                {isZh ? translateTeam(awayName) : awayName}
+              </Text>
+            </View>
+          </View>
+
+          {/* Betting Odds Card */}
+          <View style={styles.pkGlassCard}>
+            <Text style={styles.pkCardTitle}>{isZh ? '博彩赔率' : 'Betting Odds'}</Text>
+            {loadingOdds ? (
+              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginVertical: 12 }} />
+            ) : realOdds ? (
+              <View style={styles.pkOddsRow}>
+                <View style={styles.pkOddsCol}>
+                  <Text style={styles.pkOddsValue}>{realOdds.homeOdds}</Text>
+                </View>
+                <View style={[styles.pkOddsCol, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]}>
+                  <Text style={styles.pkOddsValue}>{realOdds.drawOdds}</Text>
+                </View>
+                <View style={styles.pkOddsCol}>
+                  <Text style={styles.pkOddsValue}>{realOdds.awayOdds}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginVertical: 12, fontSize: 13 }}>
+                {isZh ? '暂无实时赔率数据' : 'No live odds available'}
+              </Text>
+            )}
+          </View>
+
+          {/* Group Standings Card (If applicable) */}
+          {groupStanding && (
+            <View style={styles.pkGlassCard}>
+              <Text style={styles.pkCardTitle}>
+                {getGroupName(groupStanding.group)} {isZh ? '积分表' : 'Standings'}
+              </Text>
+              
+              {/* Standings Header */}
+              <View style={styles.pkStandingsHeader}>
+                <Text style={[styles.pkStandingsColTeam, { color: 'rgba(255,255,255,0.5)' }]}>{isZh ? '球队' : 'Team'}</Text>
+                <View style={styles.pkStandingsHeaderRight}>
+                  <Text style={styles.pkStandingsColStat}>{isZh ? '场' : 'P'}</Text>
+                  <Text style={styles.pkStandingsColStat}>{isZh ? '胜' : 'W'}</Text>
+                  <Text style={styles.pkStandingsColStat}>{isZh ? '平' : 'D'}</Text>
+                  <Text style={styles.pkStandingsColStat}>{isZh ? '负' : 'L'}</Text>
+                  <Text style={[styles.pkStandingsColStat, { width: 26 }]}>{isZh ? '净' : 'GD'}</Text>
+                  <Text style={[styles.pkStandingsColStat, { color: '#FFF', fontWeight: '700' }]}>{isZh ? '积分' : 'Pts'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.pkCardDivider} />
+
+              {/* Standings Rows */}
+              {groupStanding.table.map((entry) => {
+                const flag = getTeamFlagCode(entry.team.name);
+                const isCurrentTeam = entry.team.name === homeName || entry.team.name === awayName;
+                return (
+                  <View key={entry.team.id} style={[styles.pkStandingsRow, isCurrentTeam && { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 8, paddingHorizontal: 4 }]}>
+                    <View style={styles.pkStandingsTeamLeft}>
+                      <Text style={styles.pkStandingsRank}>{entry.position}</Text>
+                      {flag ? (
+                        <CountryFlag isoCode={flag} size={14} style={styles.pkStandingsFlag} />
+                      ) : (
+                        <View style={styles.pkStandingsFlagPlaceholder} />
+                      )}
+                      <Text style={styles.pkStandingsTeamName} numberOfLines={1}>
+                        {isZh ? translateTeam(entry.team.name) : entry.team.name}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.pkStandingsHeaderRight}>
+                      <Text style={styles.pkStandingsStatVal}>{entry.playedGames}</Text>
+                      <Text style={styles.pkStandingsStatVal}>{entry.won}</Text>
+                      <Text style={styles.pkStandingsStatVal}>{entry.draw}</Text>
+                      <Text style={styles.pkStandingsStatVal}>{entry.lost}</Text>
+                      <Text style={[styles.pkStandingsStatVal, { width: 26 }]}>
+                        {entry.goalDifference > 0 ? `+${entry.goalDifference}` : entry.goalDifference}
+                      </Text>
+                      <Text style={[styles.pkStandingsStatVal, { color: '#FFF', fontWeight: '700' }]}>{entry.points}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </View>
+    );
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <LiquidBackground />
@@ -362,6 +768,17 @@ export default function ScheduleScreen() {
         <View style={styles.headerTitleRow}>
           <Text style={[styles.title, { color: colors.text }]}>2026 FIFA 世界杯</Text>
           <FontAwesome name="trophy" size={22} color={colors.gold || '#FFE066'} style={{ marginLeft: 8 }} />
+          
+          {/* Quick link button to view standings modal at any time */}
+          <Pressable 
+            onPress={() => setShowStandingsModal(true)}
+            style={[styles.floatingStandingsBtn, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)' }]}
+          >
+            <FontAwesome name="list-ol" size={12} color={colors.text} />
+            <Text style={[styles.floatingStandingsBtnText, { color: colors.text }]}>
+              {isZh ? ' 积分榜' : ' Standings'}
+            </Text>
+          </Pressable>
         </View>
 
         {/* Stage selection bar */}
@@ -443,6 +860,30 @@ export default function ScheduleScreen() {
           }
         </View>
       )}
+
+      {/* Standings Modal Overlay (Always accessible to review standings "与时俱进") */}
+      {showStandingsModal && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 100 }]}>
+          <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={90} style={StyleSheet.absoluteFill} />
+          
+          <View style={[styles.modalHeader, { paddingTop: Platform.OS === 'ios' ? 64 : 54 }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {isZh ? '世界杯完整积分榜' : 'World Cup Standings'}
+            </Text>
+            <Pressable 
+              onPress={() => setShowStandingsModal(false)}
+              style={[styles.modalCloseBtn, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)' }]}
+            >
+              <FontAwesome name="close" size={16} color={colors.text} />
+            </Pressable>
+          </View>
+          
+          {renderStandings(true)}
+        </View>
+      )}
+
+      {/* Match Details Overlay Screen (With PK layout & fluid gradients) */}
+      {selectedDetailMatch && renderMatchDetailModal()}
     </View>
   );
 }
@@ -463,6 +904,18 @@ const styles = StyleSheet.create({
     ...Typography.header,
     fontSize: 22,
     fontWeight: '800',
+  },
+  floatingStandingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 'auto',
+  },
+  floatingStandingsBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   stageTabBar: {
     marginVertical: 4,
@@ -709,5 +1162,285 @@ const styles = StyleSheet.create({
     height: 1.5,
     position: 'absolute',
     left: 15,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pkBackgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: -10,
+    overflow: 'hidden',
+    backgroundColor: '#071A0E',
+  },
+  pkBlobLeft: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 1.15,
+    height: SCREEN_WIDTH * 1.15,
+    borderRadius: (SCREEN_WIDTH * 1.15) / 2,
+    top: -SCREEN_HEIGHT * 0.1,
+    left: -SCREEN_WIDTH * 0.35,
+    opacity: 0.45,
+  },
+  pkBlobRight: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 1.15,
+    height: SCREEN_WIDTH * 1.15,
+    borderRadius: (SCREEN_WIDTH * 1.15) / 2,
+    bottom: SCREEN_HEIGHT * 0.1,
+    right: -SCREEN_WIDTH * 0.35,
+    opacity: 0.45,
+  },
+  pkHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  pkIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  pkScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 64,
+  },
+  pkStageTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.6)',
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  pkMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    marginBottom: 24,
+  },
+  pkTeamCol: {
+    flex: 3,
+    alignItems: 'center',
+  },
+  largeFlagWrapper: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    overflow: 'hidden',
+    borderWidth: 2.5,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  largeFlag: {
+    width: 102,
+    height: 76,
+  },
+  largeFlagPlaceholder: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pkTeamName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  pkTeamRecord: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 4,
+  },
+  pkTimeCol: {
+    flex: 2,
+    alignItems: 'center',
+  },
+  pkTimeText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  pkActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pkRoundActionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pkPillActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginLeft: 12,
+  },
+  pkPillActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  pkBroadcastText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  pkGlassCard: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    overflow: 'hidden',
+  },
+  pkCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  pkOddsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  pkOddsCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  pkOddsValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  pkCardDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: 12,
+  },
+  pkOddsFooter: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.4)',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  pkStandingsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pkStandingsColTeam: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.4)',
+    flex: 1.2,
+  },
+  pkStandingsHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pkStandingsColStat: {
+    width: 22,
+    textAlign: 'center',
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.4)',
+    marginLeft: 6,
+    fontWeight: '700',
+  },
+  pkStandingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 9,
+  },
+  pkStandingsTeamLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1.2,
+  },
+  pkStandingsRank: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.4)',
+    width: 14,
+    textAlign: 'center',
+  },
+  pkStandingsFlag: {
+    borderRadius: 2,
+    marginHorizontal: 8,
+  },
+  pkStandingsFlagPlaceholder: {
+    width: 14,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 8,
+  },
+  pkStandingsTeamName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  pkStandingsStatVal: {
+    width: 22,
+    textAlign: 'center',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 6,
   },
 });

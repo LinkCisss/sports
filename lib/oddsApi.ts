@@ -1,11 +1,21 @@
 import axios from 'axios';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Platform } from 'react-native';
 dayjs.extend(utc);
 
 // The Odds API 免费版配额有限，请注意调用频率
 const API_KEY = process.env.EXPO_PUBLIC_ODDS_API_KEY || '90ac78ab00a546e7440e90a7c93316fe';
-const BASE_URL = 'https://api.the-odds-api.com/v4/sports';
+
+const buildUrl = (path: string, params: Record<string, any>): string => {
+  const queryString = Object.keys(params)
+    .filter(key => params[key] !== undefined && params[key] !== null)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join('&');
+  
+  const target = `https://api.the-odds-api.com/v4/sports${path}?${queryString}`;
+  return Platform.OS === 'web' ? `https://corsproxy.io/?${target}` : target;
+};
 
 export interface OddsOutcome {
   name: string;
@@ -39,7 +49,7 @@ export interface MatchOdds {
 /**
  * 获取赛事及实时赔率 (仅 h2h 胜平负)
  * @param sportKey 联赛 Key
- * @param dateString 可选：指定查询的日期 (YYYY-MM-DD)，不传则返回默认的 Live/Upcoming
+ * @param dateString 可选：指定查询的日期 (YYYY-MM-DD)，不传则返回默认 of Live/Upcoming
  */
 export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl', dateString?: string): Promise<MatchOdds[]> => {
   try {
@@ -56,7 +66,8 @@ export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl', 
       params.commenceTimeTo = dayjs(dateString).endOf('day').utc().format();
     }
 
-    const response = await axios.get(`${BASE_URL}/${sportKey}/odds`, { params });
+    const url = buildUrl(`/${sportKey}/odds`, params);
+    const response = await axios.get(url);
     
     return response.data;
   } catch (error) {
@@ -71,14 +82,15 @@ export const fetchLiveMatchesWithOdds = async (sportKey: string = 'soccer_epl', 
  */
 export const fetchEventOdds = async (sportKey: string, eventId: string): Promise<MatchOdds | null> => {
   try {
-    const response = await axios.get(`${BASE_URL}/${sportKey}/events/${eventId}/odds`, {
-      params: {
-        apiKey: API_KEY,
-        regions: 'eu,us',
-        markets: 'h2h,spreads,totals',
-        oddsFormat: 'decimal',
-      },
-    });
+    const params = {
+      apiKey: API_KEY,
+      regions: 'eu,us',
+      markets: 'h2h,spreads,totals',
+      oddsFormat: 'decimal',
+    };
+
+    const url = buildUrl(`/${sportKey}/events/${eventId}/odds`, params);
+    const response = await axios.get(url);
     
     return response.data;
   } catch (error) {

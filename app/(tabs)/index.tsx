@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, View, Text, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, RefreshControl, Pressable, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
-import { supabase } from '@/lib/supabase';
 import { fetchLiveMatchesWithOdds, MatchOdds } from '@/lib/oddsApi';
 import { useTranslation } from 'react-i18next';
 import { translateTeam, translateLeague } from '@/utils/translate';
@@ -13,6 +12,8 @@ import { getTeamFlagCode } from '@/utils/flags';
 import dayjs from 'dayjs';
 import { useColorScheme } from '@/components/useColorScheme';
 import { LiquidBackground } from '@/components/LiquidBackground';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LEAGUES = [
   { key: 'soccer_epl', label: 'EPL' },
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const colors = Colors[theme];
   const { t, i18n } = useTranslation();
   const isZh = i18n.language.startsWith('zh');
+  const insets = useSafeAreaInsets();
 
   const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
   const displayLeague = (name: string) => isZh ? translateLeague(name) : name;
@@ -110,18 +112,34 @@ export default function HomeScreen() {
     }).filter(odds => odds.team1 > 0);
   };
 
+  const safeTop = insets.top > 0 ? insets.top : 28;
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LiquidBackground />
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={{ paddingTop: 96 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
-        }
-      >
-        <View style={styles.header}>
-          <Text style={[styles.dateText, { color: colors.text }]}>{t('home.today')}</Text>
+
+      {/* Sticky Premium Glass Header containing Title and Switchers */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        paddingTop: safeTop + (Platform.OS === 'android' ? 12 : 8),
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        overflow: 'hidden',
+        zIndex: 10,
+      }}>
+        <BlurView 
+          tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} 
+          intensity={85} 
+          style={StyleSheet.absoluteFill} 
+        />
+        
+        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+          <Text style={[styles.dateText, { color: colors.text }]}>
+            {isZh ? '赔率' : 'Odds'}
+          </Text>
         </View>
 
         {/* Date Switcher */}
@@ -158,7 +176,7 @@ export default function HomeScreen() {
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
-          style={styles.switcher} 
+          style={[styles.switcher, { marginBottom: 14 }]} 
           contentContainerStyle={styles.switcherContent}
         >
           {LEAGUES.map(league => {
@@ -183,6 +201,15 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
+      </View>
+
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingTop: safeTop + 185, paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }
+      >
       
       {loading ? (
         <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />

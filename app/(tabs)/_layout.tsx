@@ -46,17 +46,22 @@ export default function TabLayout() {
           paddingBottom: 6,
         },
         tabBarBackground: () => (
-          <View style={{ flex: 1, borderRadius: 33, overflow: 'hidden' }}>
+          <View style={{ 
+            flex: 1, 
+            borderRadius: 33, 
+            overflow: 'hidden', 
+            backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)' 
+          }}>
             <BlurView
               tint={colorScheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
-              intensity={80}
+              intensity={20}
               experimentalBlurMethod="dimezisBlurView"
               style={StyleSheet.absoluteFill}
             />
             {/* Glass border reflection */}
             <View style={[StyleSheet.absoluteFill, { 
               borderWidth: 1, 
-              borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', 
+              borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.45)', 
               borderRadius: 33 
             }]} />
           </View>
@@ -67,7 +72,7 @@ export default function TabLayout() {
         headerBackground: () => (
           <BlurView
             tint={colorScheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
-            intensity={80}
+            intensity={45}
             style={StyleSheet.absoluteFill}
           />
         ),
@@ -81,17 +86,19 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, true),
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: t('tabs.scores') || 'Scores',
-          tabBarIcon: ({ color }) => <TabBarIcon name="soccer-ball-o" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="schedule"
         options={{
           title: t('tabs.schedule') || 'Schedule',
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: t('tabs.scores') || 'Scores',
+          tabBarIcon: ({ color }) => <TabBarIcon name="soccer-ball-o" color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -104,8 +111,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="favorites"
         options={{
-          title: t('tabs.favorites') || 'Favorites',
-          tabBarIcon: ({ color }) => <TabBarIcon name="heart" color={color} />,
+          href: null,
         }}
       />
       <Tabs.Screen

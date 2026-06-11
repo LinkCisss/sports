@@ -1,8 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Platform } from 'react-native';
 
 const API_TOKEN = '88a9c7a0f16248d19093dac45d7ecf39';
-const BASE_URL = 'https://api.football-data.org/v4';
+const BASE_URL = Platform.OS === 'web'
+  ? 'https://corsproxy.io/?https://api.football-data.org/v4'
+  : 'https://api.football-data.org/v4';
 
 // Cache expiry: 5 minutes to protect user rate limits
 const CACHE_DURATION_MS = 5 * 60 * 1000;

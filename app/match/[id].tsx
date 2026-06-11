@@ -15,8 +15,14 @@ import * as WebBrowser from 'expo-web-browser';
 import { useColorScheme } from '@/components/useColorScheme';
 import { LiquidBackground } from '@/components/LiquidBackground';
 import { BlurView } from 'expo-blur';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, useAnimatedScrollHandler } from 'react-native-reanimated';
+import { Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const AFFILIATE_LINK = "https://reffpa.com/L?tag=d_5622403m_97c_&site=5622403&ad=97";
+
+import { getTeamColors } from '@/utils/teamColors';
 
 export default function MatchDetailScreen() {
   const { id, sportKey } = useLocalSearchParams<{ id: string; sportKey: string }>();
@@ -28,6 +34,64 @@ export default function MatchDetailScreen() {
 
   const [matchData, setMatchData] = useState<MatchOdds | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const pkScale1 = useSharedValue(1);
+  const pkTx1 = useSharedValue(0);
+  const pkTy1 = useSharedValue(0);
+
+  const pkScale2 = useSharedValue(1);
+  const pkTx2 = useSharedValue(0);
+  const pkTy2 = useSharedValue(0);
+
+  const pkAnimatedBlob1 = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pkTx1.value },
+      { translateY: pkTy1.value },
+      { scale: pkScale1.value }
+    ],
+  }));
+
+  const pkAnimatedBlob2 = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pkTx2.value },
+      { translateY: pkTy2.value },
+      { scale: pkScale2.value }
+    ],
+  }));
+
+  useEffect(() => {
+    pkScale1.value = withRepeat(withTiming(1.35, { duration: 6500 }), -1, true);
+    pkTx1.value = withRepeat(withTiming(SCREEN_WIDTH * 0.18, { duration: 8000 }), -1, true);
+    pkTy1.value = withRepeat(withTiming(SCREEN_HEIGHT * 0.08, { duration: 9000 }), -1, true);
+
+    pkScale2.value = withRepeat(withTiming(1.28, { duration: 6000 }), -1, true);
+    pkTx2.value = withRepeat(withTiming(-SCREEN_WIDTH * 0.18, { duration: 7500 }), -1, true);
+    pkTy2.value = withRepeat(withTiming(-SCREEN_HEIGHT * 0.08, { duration: 8500 }), -1, true);
+  }, []);
+
+  const lastScrollY = useSharedValue(0);
+  const buttonTranslateY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+      
+      if (currentY <= 10) {
+        buttonTranslateY.value = withTiming(0, { duration: 180 });
+      } else if (diff > 8) {
+        buttonTranslateY.value = withTiming(150, { duration: 220 });
+      } else if (diff < -8) {
+        buttonTranslateY.value = withTiming(0, { duration: 220 });
+      }
+      
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const animatedButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: buttonTranslateY.value }],
+  }));
 
   const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
 
@@ -98,20 +162,40 @@ export default function MatchDetailScreen() {
     );
   };
 
+  const homeColors = getTeamColors(matchData?.home_team || '');
+  const awayColors = getTeamColors(matchData?.away_team || '');
+  const leftBlobColor = homeColors[0];
+  const rightBlobColor = awayColors[0];
+  const pkBgColor = theme === 'dark' ? '#050D1A' : '#F4F7FB';
+  const safeTop = insets.top > 0 ? insets.top : 28;
+
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
-      <LiquidBackground />
+      {/* Dynamic Fluid PK Background */}
+      <View style={[styles.pkBackgroundContainer, { backgroundColor: pkBgColor }]}>
+        <Animated.View style={[
+          styles.pkBlobLeft, 
+          { backgroundColor: leftBlobColor, opacity: theme === 'dark' ? 0.45 : 0.28 },
+          pkAnimatedBlob1
+        ]} />
+        <Animated.View style={[
+          styles.pkBlobRight, 
+          { backgroundColor: rightBlobColor, opacity: theme === 'dark' ? 0.45 : 0.28 },
+          pkAnimatedBlob2
+        ]} />
+        <BlurView tint={theme === 'light' ? 'light' : 'dark'} intensity={theme === 'light' ? 70 : 65} style={StyleSheet.absoluteFill} />
+      </View>
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* Truly Absolute Glass Top Header Area */}
+      {/* Compact Glass Top Title Bar */}
       <View style={{ 
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 8), 
-        paddingBottom: 16, 
-        zIndex: 10,
+        paddingTop: safeTop + (Platform.OS === 'android' ? 6 : 4), 
+        paddingBottom: 6, 
+        zIndex: 15,
         overflow: 'hidden',
         borderBottomWidth: 1,
         borderBottomColor: colors.border
@@ -121,8 +205,6 @@ export default function MatchDetailScreen() {
           intensity={85} 
           style={StyleSheet.absoluteFill} 
         />
-        
-        {/* Title Bar */}
         <View style={styles.headerTopRow}>
           <Pressable 
             onPress={() => router.back()} 
@@ -130,18 +212,32 @@ export default function MatchDetailScreen() {
           >
             <FontAwesome name="chevron-left" size={16} color={colors.text} style={{ marginLeft: -2 }} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{isZh ? '比赛详情' : 'Match Details'}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text, fontSize: 16, fontWeight: '700' }]}>
+            {isZh ? '比赛详情' : 'Match Details'}
+          </Text>
           <View style={{ width: 40 }} />
         </View>
+      </View>
 
-        {/* Hovering Capsule for Teams */}
+      {/* Floating Team Capsule (Below title row, no blur, distinct background) */}
+      <View style={{ 
+        position: 'absolute',
+        top: safeTop + 52 + 10, 
+        left: 0,
+        right: 0,
+        zIndex: 10,
+      }}>
         <View style={styles.capsuleContainer}>
           <View style={[
             styles.capsule, 
-            { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }, 
+            { 
+              backgroundColor: theme === 'dark' ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)', 
+              overflow: 'hidden', 
+              borderWidth: 1, 
+              borderColor: colors.border 
+            }, 
             theme === 'dark' ? styles.shadowDark : styles.shadowLight
           ]}>
-            <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={20} style={StyleSheet.absoluteFill} />
             <View style={styles.horizontalTeams}>
               <View style={[styles.teamInline, { justifyContent: 'flex-end' }]}>
                 <Text style={[styles.smallTeamName, { color: colors.text, textAlign: 'right' }]} numberOfLines={1}>
@@ -168,7 +264,11 @@ export default function MatchDetailScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 165 }]}>
+      <Animated.ScrollView 
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 160 }]}
+      >
 
         {/* Bookmakers List */}
         {matchData.bookmakers.length === 0 ? (
@@ -192,19 +292,16 @@ export default function MatchDetailScreen() {
           ))
         )}
 
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Floating Action Button (Affiliate) */}
-      <View style={[
+      <Animated.View style={[
         styles.fabContainer, 
+        animatedButtonStyle,
         { 
           backgroundColor: 'transparent', 
-          borderTopWidth: 1, 
-          borderTopColor: colors.border,
-          overflow: 'hidden' 
         }
       ]}>
-        <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={80} style={StyleSheet.absoluteFill} />
         <Pressable 
           style={({ pressed }) => [
             styles.fabButton, 
@@ -216,7 +313,7 @@ export default function MatchDetailScreen() {
           <Text style={styles.fabText}>{isZh ? '去 1xBet 投注' : 'Bet at 1xBet'}</Text>
           <FontAwesome name="external-link" size={16} color="#FFFFFF" style={{ marginLeft: 8 }} />
         </Pressable>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -230,9 +327,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
     paddingHorizontal: 16,
-    paddingTop: 8, // Give it some breathing room from the top safe area
   },
   backButton: {
     width: 40,
@@ -323,24 +418,25 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 30,
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 30, // Safe area + padding
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(150,150,150,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
   },
   fabButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 100, // Pill shape
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 100,
+    width: '64%',
   },
   fabText: {
-    ...Typography.teamName, // Use large bold font
+    ...Typography.body,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   shadowLight: {
@@ -356,5 +452,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 6,
+  },
+  pkBackgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: -10,
+    overflow: 'hidden',
+  },
+  pkBlobLeft: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 0.85,
+    height: SCREEN_WIDTH * 0.85,
+    borderRadius: (SCREEN_WIDTH * 0.85) / 2,
+    top: SCREEN_HEIGHT * 0.08,
+    left: -SCREEN_WIDTH * 0.2,
+  },
+  pkBlobRight: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 0.85,
+    height: SCREEN_WIDTH * 0.85,
+    borderRadius: (SCREEN_WIDTH * 0.85) / 2,
+    bottom: SCREEN_HEIGHT * 0.2,
+    right: -SCREEN_WIDTH * 0.2,
   },
 });
