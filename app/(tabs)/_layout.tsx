@@ -1,7 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Platform, View, Pressable } from 'react-native';
+import { StyleSheet, Platform, View, Pressable, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
@@ -24,7 +24,6 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        animation: 'fade',
         tabBarActiveTintColor: Colors[colorScheme].tabIconSelected,
         tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
         tabBarButton: ({ onPress, children, style }: any) => (
@@ -43,6 +42,8 @@ export default function TabLayout() {
           bottom: Platform.OS === 'ios' ? 30 : 20,
           left: 36,
           right: 36,
+          width: Dimensions.get('window').width - 72,
+          alignSelf: 'center',
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',
@@ -63,10 +64,10 @@ export default function TabLayout() {
             flex: 1, 
             borderRadius: 33, 
             overflow: 'hidden', 
-            backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)' 
+            backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)' 
           }}>
             <BlurView
-              tint={colorScheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
+              tint={colorScheme === 'dark' ? 'dark' : 'light'}
               intensity={20}
               experimentalBlurMethod="dimezisBlurView"
               style={StyleSheet.absoluteFill}
@@ -74,7 +75,7 @@ export default function TabLayout() {
             {/* Glass border reflection */}
             <View style={[StyleSheet.absoluteFill, { 
               borderWidth: 1, 
-              borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.45)', 
+              borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.35)', 
               borderRadius: 33 
             }]} />
           </View>
