@@ -62,7 +62,10 @@ function InnerLayout() {
 
   return (
     <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{
+        animation: 'slide_from_right',
+        animationDuration: 250,
+      }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>

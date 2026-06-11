@@ -1,9 +1,10 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Platform, View } from 'react-native';
+import { StyleSheet, Platform, View, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -23,8 +24,20 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        animation: 'fade',
         tabBarActiveTintColor: Colors[colorScheme].tabIconSelected,
         tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
+        tabBarButton: ({ onPress, children, style }: any) => (
+          <Pressable
+            style={style}
+            onPress={(e) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              onPress?.(e);
+            }}
+          >
+            {children}
+          </Pressable>
+        ),
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 30 : 20,

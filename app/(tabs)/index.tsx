@@ -14,6 +14,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { LiquidBackground } from '@/components/LiquidBackground';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 const LEAGUES = [
   { key: 'soccer_epl', label: 'EPL' },
@@ -159,7 +160,10 @@ export default function HomeScreen() {
                   { borderWidth: 1, borderColor: colors.border },
                   isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
                 ]}
-                onPress={() => setSelectedDate(dateOpt.value)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setSelectedDate(dateOpt.value);
+                }}
               >
                 <Text style={[
                   styles.pillText, 
@@ -189,7 +193,10 @@ export default function HomeScreen() {
                   { borderWidth: 1, borderColor: colors.border },
                   isActive ? { backgroundColor: colors.text } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
                 ]}
-                onPress={() => handleLeagueChange(league.key)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  handleLeagueChange(league.key);
+                }}
               >
                 <Text style={[
                   styles.pillText, 
@@ -220,7 +227,12 @@ export default function HomeScreen() {
             href={{ pathname: '/match/[id]', params: { id: match.id, sportKey: match.sport_key } }} 
             asChild
           >
-            <Pressable style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+            <Pressable 
+              style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              }}
+            >
               <MatchCard
                 matchData={match}
                 league={displayLeague(match.sport_title)}

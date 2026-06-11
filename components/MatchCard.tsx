@@ -10,6 +10,7 @@ import { checkIsFavorite, addFavorite, removeFavorite } from '@/lib/favorites';
 import { useColorScheme } from '@/components/useColorScheme';
 import { BlurView } from 'expo-blur';
 import { getTeamColors } from '@/utils/teamColors';
+import * as Haptics from 'expo-haptics';
 
 interface MatchCardProps {
   matchData?: MatchOdds; // For saving favorites
@@ -38,6 +39,8 @@ export function MatchCard({ matchData, league, time, team1, team2, oddsList }: M
   const toggleFavorite = async (e: any) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (e && e.preventDefault) e.preventDefault();
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     if (!matchData) return;
     if (isFavorite) {

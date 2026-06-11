@@ -12,6 +12,7 @@ import { getTeamFlagCode } from '@/utils/flags';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import CountryFlag from 'react-native-country-flag';
 import * as WebBrowser from 'expo-web-browser';
+import * as Haptics from 'expo-haptics';
 import { useColorScheme } from '@/components/useColorScheme';
 import { LiquidBackground } from '@/components/LiquidBackground';
 import { BlurView } from 'expo-blur';
@@ -96,6 +97,7 @@ export default function MatchDetailScreen() {
   const displayTeam = (name: string) => isZh ? translateTeam(name) : name;
 
   const handleBetNow = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     await WebBrowser.openBrowserAsync(AFFILIATE_LINK);
   };
 
@@ -207,7 +209,10 @@ export default function MatchDetailScreen() {
         />
         <View style={styles.headerTopRow}>
           <Pressable 
-            onPress={() => router.back()} 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              router.back();
+            }} 
             style={[styles.backButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
           >
             <FontAwesome name="chevron-left" size={16} color={colors.text} style={{ marginLeft: -2 }} />
