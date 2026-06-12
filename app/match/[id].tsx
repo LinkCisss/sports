@@ -24,6 +24,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AFFILIATE_LINK = "https://reffpa.com/L?tag=d_5622403m_97c_&site=5622403&ad=97";
 
 import { getTeamColors } from '@/utils/teamColors';
+import { getMatchLineup } from '@/lib/lineupGenerator';
 
 export default function MatchDetailScreen() {
   const { id, sportKey } = useLocalSearchParams<{ id: string; sportKey: string }>();
@@ -35,6 +36,7 @@ export default function MatchDetailScreen() {
 
   const [matchData, setMatchData] = useState<MatchOdds | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'odds' | 'lineup'>('odds');
 
   const pkScale1 = useSharedValue(1);
   const pkTx1 = useSharedValue(0);
@@ -274,29 +276,177 @@ export default function MatchDetailScreen() {
         scrollEventThrottle={16}
         contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 160 }]}
       >
-
-        {/* Bookmakers List */}
-        {matchData.bookmakers.length === 0 ? (
-          <Text style={{ textAlign: 'center', color: colors.textSecondary, marginTop: 40 }}>
-            No odds data available for this match yet.
-          </Text>
-        ) : (
-          matchData.bookmakers.map(bookmaker => (
-            <View key={bookmaker.key} style={[
-              styles.bookmakerCard, 
-              { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }
+        {/* Tab Selector */}
+        <View style={styles.tabSelectorContainer}>
+          <Pressable 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setActiveTab('odds');
+            }}
+            style={[
+              styles.tabSelectorItem, 
+              activeTab === 'odds' ? { borderBottomColor: colors.accent } : { borderBottomColor: 'transparent' }
+            ]}
+          >
+            <Text style={[
+              styles.tabSelectorText, 
+              { color: activeTab === 'odds' ? colors.text : colors.textSecondary }
             ]}>
-              <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
-              <Text style={[styles.bookmakerTitle, { color: colors.text }]}>{bookmaker.title}</Text>
-              
-              {renderMarket(bookmaker, 'h2h', isZh ? '胜平负 (Moneyline)' : 'Moneyline (H2H)')}
-              {renderMarket(bookmaker, 'spreads', isZh ? '让分 (Spreads)' : 'Spreads')}
-              {renderMarket(bookmaker, 'totals', isZh ? '大小球 (Totals)' : 'Totals')}
-              
-            </View>
-          ))
-        )}
+              {isZh ? '数据赔率' : 'Odds'}
+            </Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setActiveTab('lineup');
+            }}
+            style={[
+              styles.tabSelectorItem, 
+              activeTab === 'lineup' ? { borderBottomColor: colors.accent } : { borderBottomColor: 'transparent' }
+            ]}
+          >
+            <Text style={[
+              styles.tabSelectorText, 
+              { color: activeTab === 'lineup' ? colors.text : colors.textSecondary }
+            ]}>
+              {isZh ? '首发阵容' : 'Lineups'}
+            </Text>
+          </Pressable>
+        </View>
 
+        {activeTab === 'odds' ? (
+          /* Bookmakers List */
+          matchData.bookmakers.length === 0 ? (
+            <Text style={{ textAlign: 'center', color: colors.textSecondary, marginTop: 40 }}>
+              No odds data available for this match yet.
+            </Text>
+          ) : (
+            matchData.bookmakers.map(bookmaker => (
+              <View key={bookmaker.key} style={[
+                styles.bookmakerCard, 
+                { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }
+              ]}>
+                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                <Text style={[styles.bookmakerTitle, { color: colors.text }]}>{bookmaker.title}</Text>
+                
+                {renderMarket(bookmaker, 'h2h', isZh ? '胜平负 (Moneyline)' : 'Moneyline (H2H)')}
+                {renderMarket(bookmaker, 'spreads', isZh ? '让分 (Spreads)' : 'Spreads')}
+                {renderMarket(bookmaker, 'totals', isZh ? '大小球 (Totals)' : 'Totals')}
+              </View>
+            ))
+          )
+        ) : (
+          /* Lineups Section */
+          (() => {
+            const lineups = getMatchLineup(matchData.home_team, matchData.away_team);
+            return (
+              <View style={styles.lineupContainer}>
+                <View style={[styles.lineupHeaderCard, { backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
+                  <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                  
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
+                    {/* Home Coach / Formation */}
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }}>{isZh ? '阵型' : 'Formation'}</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginVertical: 4 }}>{lineups.home.formation}</Text>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.home.coach}</Text>
+                    </View>
+                    
+                    {/* Divider */}
+                    <View style={{ width: 1, backgroundColor: colors.border, height: '100%' }} />
+                    
+                    {/* Away Coach / Formation */}
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }}>{isZh ? '阵型' : 'Formation'}</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginVertical: 4 }}>{lineups.away.formation}</Text>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.away.coach}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Starting XI Section */}
+                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20, marginBottom: 12 }]}>{isZh ? '首发名单' : 'Starting XI'}</Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  {/* Home Starting XI */}
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                    <View style={{ padding: 12 }}>
+                      {lineups.home.startingXI.map((player) => (
+                        <View key={player.number} style={styles.playerRow}>
+                          <View style={[styles.numberCircle, { backgroundColor: colors.accent }]}>
+                            <Text style={styles.numberText}>{player.number}</Text>
+                          </View>
+                          <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Away Starting XI */}
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                    <View style={{ padding: 12 }}>
+                      {lineups.away.startingXI.map((player) => (
+                        <View key={player.number} style={styles.playerRow}>
+                          <View style={[styles.numberCircle, { backgroundColor: colors.text }]}>
+                            <Text style={[styles.numberText, { color: colors.background }]}>{player.number}</Text>
+                          </View>
+                          <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Substitutes Section */}
+                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20, marginBottom: 12 }]}>{isZh ? '替补名单' : 'Substitutes'}</Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  {/* Home Substitutes */}
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                    <View style={{ padding: 12 }}>
+                      {lineups.home.substitutes.map((player) => (
+                        <View key={player.number} style={styles.playerRow}>
+                          <View style={[styles.numberCircle, { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: colors.border }]}>
+                            <Text style={[styles.numberText, { color: colors.textSecondary }]}>{player.number}</Text>
+                          </View>
+                          <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Away Substitutes */}
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                    <View style={{ padding: 12 }}>
+                      {lineups.away.substitutes.map((player) => (
+                        <View key={player.number} style={styles.playerRow}>
+                          <View style={[styles.numberCircle, { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: colors.border }]}>
+                            <Text style={[styles.numberText, { color: colors.textSecondary }]}>{player.number}</Text>
+                          </View>
+                          <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            );
+          })()
+        )}
       </Animated.ScrollView>
 
       {/* Floating Action Button (Affiliate) */}
@@ -478,5 +628,57 @@ const styles = StyleSheet.create({
     borderRadius: (SCREEN_WIDTH * 0.85) / 2,
     bottom: SCREEN_HEIGHT * 0.2,
     right: -SCREEN_WIDTH * 0.2,
+  },
+  tabSelectorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  tabSelectorItem: {
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 3,
+  },
+  tabSelectorText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  lineupContainer: {
+    width: '100%',
+  },
+  lineupHeaderCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  squadCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  numberCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numberText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });

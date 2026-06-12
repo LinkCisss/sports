@@ -14,6 +14,7 @@ import { fetchWorldCupStandings, fetchWorldCupMatches, FootballDataMatch, GroupS
 import { fetchLiveMatchesWithOdds } from '@/lib/oddsApi';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+import { getMatchLineup } from '@/lib/lineupGenerator';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -763,6 +764,67 @@ export default function ScheduleScreen() {
               </Text>
             )}
           </View>
+
+          {/* Starting Lineups Card */}
+          {(() => {
+            const lineups = getMatchLineup(homeName, awayName);
+            return (
+              <View style={styles.pkGlassCard}>
+                <Text style={styles.pkCardTitle}>{isZh ? '首发及战术阵容' : 'Starting Lineups'}</Text>
+                
+                {/* Formations and Coaches */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{isZh ? '主队阵型' : 'Home Formation'}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginVertical: 2 }}>{lineups.home.formation}</Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.home.coach}</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)', height: '100%' }} />
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{isZh ? '客队阵型' : 'Away Formation'}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginVertical: 2 }}>{lineups.away.formation}</Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.away.coach}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.pkCardDivider} />
+                
+                {/* Starting XI Lists side-by-side */}
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                  {/* Home XI */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF', marginBottom: 8, opacity: 0.9 }}>{isZh ? '主队首发' : 'Home XI'}</Text>
+                    {lineups.home.startingXI.map(player => (
+                      <View key={player.number} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+                        <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>{player.number}</Text>
+                        </View>
+                        <Text style={{ fontSize: 12, color: '#FFFFFF', marginLeft: 6, flex: 1 }} numberOfLines={1}>{player.name}</Text>
+                        <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', width: 22, textAlign: 'right' }}>{player.position}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  
+                  {/* Divider */}
+                  <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                  
+                  {/* Away XI */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF', marginBottom: 8, opacity: 0.9 }}>{isZh ? '客队首发' : 'Away XI'}</Text>
+                    {lineups.away.startingXI.map(player => (
+                      <View key={player.number} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+                        <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>{player.number}</Text>
+                        </View>
+                        <Text style={{ fontSize: 12, color: '#FFFFFF', marginLeft: 6, flex: 1 }} numberOfLines={1}>{player.name}</Text>
+                        <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', width: 22, textAlign: 'right' }}>{player.position}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
 
           {/* Group Standings Card (If applicable) */}
           {groupStanding && (
