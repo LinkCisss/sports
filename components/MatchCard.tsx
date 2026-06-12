@@ -65,7 +65,7 @@ export function MatchCard({ matchData, league, time, team1, team2, oddsList }: M
       styles.card, 
       theme === 'light' ? styles.shadowLight : styles.shadowDark,
       { 
-        backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(20,25,35,0.7)', 
+        backgroundColor: colors.cardBackground, 
         overflow: 'hidden', 
         borderWidth: 1, 
         borderColor: colors.border 

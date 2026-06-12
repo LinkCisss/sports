@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable, Platform, Dimensions } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable, Platform, Dimensions, Modal } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -7,7 +7,7 @@ import { LiquidBackground } from '@/components/LiquidBackground';
 import { BlurView } from 'expo-blur';
 import CountryFlag from 'react-native-country-flag';
 import { getTeamFlagCode } from '@/utils/flags';
-import { translateTeam } from '@/utils/translate';
+import { translateTeam, translatePlayer } from '@/utils/translate';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { fetchWorldCupStandings, fetchWorldCupMatches, FootballDataMatch, GroupStanding } from '@/lib/footballDataApi';
@@ -15,6 +15,7 @@ import { fetchLiveMatchesWithOdds } from '@/lib/oddsApi';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
 import { getMatchLineup } from '@/lib/lineupGenerator';
+import { TacticalPitch } from '@/components/TacticalPitch';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -326,7 +327,7 @@ export default function ScheduleScreen() {
   const renderStandings = (inModal: boolean = false) => (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, inModal && { paddingTop: 4 }]}>
       {standings.map((group) => (
-        <View key={group.group} style={[styles.glassCard, { borderColor: colors.border }]}>
+        <View key={group.group} style={[styles.glassCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
           <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
           
           <View style={styles.tableHeaderRow}>
@@ -408,7 +409,7 @@ export default function ScheduleScreen() {
                 onPress={() => setSelectedDetailMatch(match)}
                 style={({ pressed }) => [
                   styles.matchCard, 
-                  { borderColor: colors.border },
+                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
                   isFinished && { opacity: 0.6 },
                   pressed && { opacity: 0.85 }
                 ]}
@@ -440,6 +441,9 @@ export default function ScheduleScreen() {
                   {/* Home Team */}
                   <View style={[styles.teamColumn, { alignItems: 'flex-end' }]}>
                     <View style={styles.teamRowAlign}>
+                      <View style={{ backgroundColor: theme === 'light' ? 'rgba(0, 102, 204, 0.1)' : 'rgba(56, 189, 248, 0.15)', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, marginRight: 4 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: colors.accent }}>{isZh ? '主' : 'H'}</Text>
+                      </View>
                       <Text style={[
                         styles.teamNameInline, 
                         { color: colors.text, marginRight: 8 },
@@ -493,12 +497,15 @@ export default function ScheduleScreen() {
                       )}
                       <Text style={[
                         styles.teamNameInline, 
-                        { color: colors.text, marginLeft: 8 },
+                        { color: colors.text, marginLeft: 8, marginRight: 4 },
                         isFinished && match.score.winner === 'HOME_TEAM' && { color: colors.textSecondary, fontWeight: 'normal' },
                         isFinished && match.score.winner === 'AWAY_TEAM' && { fontWeight: 'bold' }
                       ]} numberOfLines={1}>
                         {isZh ? translateTeam(match.awayTeam.name) : match.awayTeam.name}
                       </Text>
+                      <View style={{ backgroundColor: 'rgba(120, 120, 120, 0.12)', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textSecondary }}>{isZh ? '客' : 'A'}</Text>
+                      </View>
                     </View>
                     <Text style={[styles.recordText, { color: colors.textSecondary }]}>0-0-0</Text>
                   </View>
@@ -563,7 +570,7 @@ export default function ScheduleScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.bracketMatchCard, 
-                  { borderColor: colors.border },
+                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
                   pressed && { opacity: 0.85 }
                 ]}
               >
@@ -575,7 +582,7 @@ export default function ScheduleScreen() {
                 </Text>
                 
                 {/* Team Rows */}
-                <View style={styles.bracketTeamsContainer}>
+                <View style={[styles.bracketTeamsContainer, { borderLeftColor: colors.border }]}>
                   {/* Home Placeholder / Team */}
                   <View style={styles.bracketTeamRow}>
                     {renderPlaceholderBadge(item.home)}
@@ -653,7 +660,13 @@ export default function ScheduleScreen() {
     const groupStanding = standings.find(s => s.group === selectedDetailMatch.group);
 
     return (
-      <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
+      <Modal
+        visible={!!selectedDetailMatch}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setSelectedDetailMatch(null)}
+      >
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0E17' }]}>
         {/* Dynamic Fluid PK Background */}
         <View style={styles.pkBackgroundContainer}>
           <Animated.View style={[
@@ -777,17 +790,33 @@ export default function ScheduleScreen() {
                   <View style={{ flex: 1, alignItems: 'center' }}>
                     <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{isZh ? '主队阵型' : 'Home Formation'}</Text>
                     <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginVertical: 2 }}>{lineups.home.formation}</Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.home.coach}</Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {isZh ? translatePlayer(lineups.home.coach) : lineups.home.coach}</Text>
                   </View>
                   <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)', height: '100%' }} />
                   <View style={{ flex: 1, alignItems: 'center' }}>
                     <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{isZh ? '客队阵型' : 'Away Formation'}</Text>
                     <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginVertical: 2 }}>{lineups.away.formation}</Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.away.coach}</Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {isZh ? translatePlayer(lineups.away.coach) : lineups.away.coach}</Text>
                   </View>
                 </View>
                 
                 <View style={styles.pkCardDivider} />
+
+                <Text style={[styles.pkCardTitle, { fontSize: 13, marginTop: 12, marginBottom: 8 }]}>
+                  {isZh ? '战术沙盘' : 'Tactical Pitch'}
+                </Text>
+                
+                <TacticalPitch 
+                  homeStartingXI={lineups.home.startingXI}
+                  homeFormation={lineups.home.formation}
+                  homeColors={getTeamColors(homeName)}
+                  awayStartingXI={lineups.away.startingXI}
+                  awayFormation={lineups.away.formation}
+                  awayColors={getTeamColors(awayName)}
+                  isZh={isZh}
+                />
+
+                <View style={[styles.pkCardDivider, { marginVertical: 14 }]} />
                 
                 {/* Starting XI Lists side-by-side */}
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
@@ -799,7 +828,7 @@ export default function ScheduleScreen() {
                         <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
                           <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>{player.number}</Text>
                         </View>
-                        <Text style={{ fontSize: 12, color: '#FFFFFF', marginLeft: 6, flex: 1 }} numberOfLines={1}>{player.name}</Text>
+                        <Text style={{ fontSize: 12, color: '#FFFFFF', marginLeft: 6, flex: 1 }} numberOfLines={1}>{isZh ? translatePlayer(player.name) : player.name}</Text>
                         <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', width: 22, textAlign: 'right' }}>{player.position}</Text>
                       </View>
                     ))}
@@ -816,7 +845,7 @@ export default function ScheduleScreen() {
                         <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
                           <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>{player.number}</Text>
                         </View>
-                        <Text style={{ fontSize: 12, color: '#FFFFFF', marginLeft: 6, flex: 1 }} numberOfLines={1}>{player.name}</Text>
+                        <Text style={{ fontSize: 12, color: '#FFFFFF', marginLeft: 6, flex: 1 }} numberOfLines={1}>{isZh ? translatePlayer(player.name) : player.name}</Text>
                         <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', width: 22, textAlign: 'right' }}>{player.position}</Text>
                       </View>
                     ))}
@@ -883,7 +912,8 @@ export default function ScheduleScreen() {
           )}
           <View style={{ height: 120 }} />
         </ScrollView>
-      </View>
+        </View>
+      </Modal>
     );
   };
 
@@ -1027,9 +1057,14 @@ export default function ScheduleScreen() {
       )}
 
       {/* Standings Modal Overlay (Always accessible to review standings "与时俱进") */}
-      {showStandingsModal && (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 100 }]}>
-          <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={90} style={StyleSheet.absoluteFill} />
+      <Modal
+        visible={showStandingsModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowStandingsModal(false)}
+      >
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0E17' }]}>
+          <BlurView tint="dark" intensity={90} style={StyleSheet.absoluteFill} />
           
           <View style={[styles.modalHeader, { paddingTop: Platform.OS === 'ios' ? 64 : 54 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -1037,7 +1072,7 @@ export default function ScheduleScreen() {
             </Text>
             <Pressable 
               onPress={() => setShowStandingsModal(false)}
-              style={[styles.modalCloseBtn, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)' }]}
+              style={[styles.modalCloseBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
             >
               <FontAwesome name="close" size={16} color={colors.text} />
             </Pressable>
@@ -1045,7 +1080,7 @@ export default function ScheduleScreen() {
           
           {renderStandings(true)}
         </View>
-      )}
+      </Modal>
 
       {/* Match Details Overlay Screen (With PK layout & fluid gradients) */}
       {selectedDetailMatch && renderMatchDetailModal()}

@@ -25,6 +25,8 @@ const AFFILIATE_LINK = "https://reffpa.com/L?tag=d_5622403m_97c_&site=5622403&ad
 
 import { getTeamColors } from '@/utils/teamColors';
 import { getMatchLineup } from '@/lib/lineupGenerator';
+import { TacticalPitch } from '@/components/TacticalPitch';
+import { translatePlayer } from '@/utils/translate';
 
 export default function MatchDetailScreen() {
   const { id, sportKey } = useLocalSearchParams<{ id: string; sportKey: string }>();
@@ -37,6 +39,7 @@ export default function MatchDetailScreen() {
   const [matchData, setMatchData] = useState<MatchOdds | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'odds' | 'lineup'>('odds');
+  const [activePitchTeam, setActivePitchTeam] = useState<'home' | 'away'>('home');
 
   const pkScale1 = useSharedValue(1);
   const pkTx1 = useSharedValue(0);
@@ -341,6 +344,7 @@ export default function MatchDetailScreen() {
             const lineups = getMatchLineup(matchData.home_team, matchData.away_team);
             return (
               <View style={styles.lineupContainer}>
+                {/* Tactical Board Selector */}
                 <View style={[styles.lineupHeaderCard, { backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
                   <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
                   
@@ -349,7 +353,9 @@ export default function MatchDetailScreen() {
                     <View style={{ flex: 1, alignItems: 'center' }}>
                       <Text style={{ fontSize: 11, color: colors.textSecondary }}>{isZh ? '阵型' : 'Formation'}</Text>
                       <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginVertical: 4 }}>{lineups.home.formation}</Text>
-                      <Text style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.home.coach}</Text>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>
+                        {isZh ? '主教练' : 'Coach'}: {isZh ? translatePlayer(lineups.home.coach) : lineups.home.coach}
+                      </Text>
                     </View>
                     
                     {/* Divider */}
@@ -359,13 +365,31 @@ export default function MatchDetailScreen() {
                     <View style={{ flex: 1, alignItems: 'center' }}>
                       <Text style={{ fontSize: 11, color: colors.textSecondary }}>{isZh ? '阵型' : 'Formation'}</Text>
                       <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginVertical: 4 }}>{lineups.away.formation}</Text>
-                      <Text style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>{isZh ? '主教练' : 'Coach'}: {lineups.away.coach}</Text>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>
+                        {isZh ? '主教练' : 'Coach'}: {isZh ? translatePlayer(lineups.away.coach) : lineups.away.coach}
+                      </Text>
                     </View>
                   </View>
                 </View>
 
-                {/* Starting XI Section */}
-                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20, marginBottom: 12 }]}>{isZh ? '首发名单' : 'Starting XI'}</Text>
+                {/* Visual Tactical Stadium Pitch */}
+                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 12, marginBottom: 12 }]}>
+                  {isZh ? '战术沙盘' : 'Tactical Pitch'}
+                </Text>
+                
+                {/* Live Pitch Board */}
+                <TacticalPitch 
+                  homeStartingXI={lineups.home.startingXI}
+                  homeFormation={lineups.home.formation}
+                  homeColors={getTeamColors(matchData.home_team)}
+                  awayStartingXI={lineups.away.startingXI}
+                  awayFormation={lineups.away.formation}
+                  awayColors={getTeamColors(matchData.away_team)}
+                  isZh={isZh}
+                />
+
+                {/* Starting XI List Section */}
+                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24, marginBottom: 12 }]}>{isZh ? '首发名单' : 'Starting XI'}</Text>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   {/* Home Starting XI */}
                   <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
@@ -377,7 +401,9 @@ export default function MatchDetailScreen() {
                             <Text style={styles.numberText}>{player.number}</Text>
                           </View>
                           <View style={{ flex: 1, marginLeft: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                              {isZh ? translatePlayer(player.name) : player.name}
+                            </Text>
                             <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
                           </View>
                         </View>
@@ -395,7 +421,9 @@ export default function MatchDetailScreen() {
                             <Text style={[styles.numberText, { color: colors.background }]}>{player.number}</Text>
                           </View>
                           <View style={{ flex: 1, marginLeft: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                              {isZh ? translatePlayer(player.name) : player.name}
+                            </Text>
                             <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
                           </View>
                         </View>
@@ -417,7 +445,9 @@ export default function MatchDetailScreen() {
                             <Text style={[styles.numberText, { color: colors.textSecondary }]}>{player.number}</Text>
                           </View>
                           <View style={{ flex: 1, marginLeft: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }} numberOfLines={1}>
+                              {isZh ? translatePlayer(player.name) : player.name}
+                            </Text>
                             <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
                           </View>
                         </View>
@@ -435,7 +465,9 @@ export default function MatchDetailScreen() {
                             <Text style={[styles.numberText, { color: colors.textSecondary }]}>{player.number}</Text>
                           </View>
                           <View style={{ flex: 1, marginLeft: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }} numberOfLines={1}>{player.name}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }} numberOfLines={1}>
+                              {isZh ? translatePlayer(player.name) : player.name}
+                            </Text>
                             <Text style={{ fontSize: 9, color: colors.textSecondary }}>{player.position}</Text>
                           </View>
                         </View>
@@ -680,5 +712,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#FFF',
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

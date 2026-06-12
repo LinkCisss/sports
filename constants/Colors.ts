@@ -1,31 +1,31 @@
-const tintColorLight = '#FF6B8B'; // Sweet strawberry pink
-const tintColorDark = '#FF8DA1';  // Bright pastel coral-pink
+const tintColorLight = '#FF6B8B'; // Vivid strawberry pink for light mode
+const tintColorDark = '#FF8DA1';  // Bright pastel coral-pink for dark mode
 
 export const Colors = {
   light: {
-    text: '#2C3E50',            // Deep slate-charcoal for text
-    textSecondary: '#7A8C9E',   // Warm soft slate for captions
-    background: '#FAF8F5',      // Creamy off-white base
-    cardBackground: 'rgba(255, 255, 255, 0.75)', // High translucency glass
+    text: '#0F172A',            // Deep slate-charcoal (very high contrast, extremely readable)
+    textSecondary: '#475569',   // Mid slate for subtitles and captions
+    background: '#F8FAFC',      // Soft, clean iOS-style slate-white background
+    cardBackground: 'rgba(255, 255, 255, 0.65)', // Frosted white glassmorphic card transparency
     tint: tintColorLight,
-    icon: '#A0B2C6',
-    tabIconDefault: '#A0B2C6',
+    icon: '#64748B',
+    tabIconDefault: '#94A3B8',
     tabIconSelected: tintColorLight,
     accent: tintColorLight,
-    border: 'rgba(255, 255, 255, 0.5)', // Extremely subtle white glass border
-    gold: '#FFD166',            // Soft pastel gold
+    border: 'rgba(15, 23, 42, 0.08)', // Very subtle dark boundary line
+    gold: '#D97706',            // Warm golden amber for trophies/ranks (readable on light backdrop)
     
-    // Macaron Pastel accents (Light Mode)
-    pink: '#FFD3D6',
-    green: '#E2F8DD',
-    blue: '#D3E2FF',
-    purple: '#E7E2FF',
-    orange: '#FFEBD3',
+    // Soft iOS pastel accents for gradients/tabs
+    pink: '#FFAEBC',            // Pastel strawberry
+    green: '#B4F8C8',           // Pastel mint
+    blue: '#A0E7E5',            // Pastel sky blue
+    purple: '#E0BBE4',          // Pastel lavender
+    orange: '#FBE7C6',          // Pastel cream orange
   },
   dark: {
     text: '#F1F5F9',            // Off-white for dark mode readability
     textSecondary: '#94A3B8',   // Soft muted slate
-    background: '#0B0F19',      // Deep dark navy base
+    background: '#0A0E17',      // Deep dark navy base
     cardBackground: 'rgba(21, 29, 45, 0.7)', // Dark glass transparency
     tint: tintColorDark,
     icon: '#64748B',
@@ -35,7 +35,7 @@ export const Colors = {
     border: 'rgba(255, 255, 255, 0.08)', // Soft dark border reflection
     gold: '#FFE066',
     
-    // Macaron Pastel accents (Dark Mode)
+    // Macaron Pastel accents for dark mode
     pink: '#FF8DA1',
     green: '#A7F3D0',
     blue: '#93C5FD',

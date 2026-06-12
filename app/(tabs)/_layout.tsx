@@ -62,8 +62,8 @@ export default function TabLayout() {
             position: 'absolute',
             top: 0,
             bottom: 0,
-            left: 24,
-            right: 24,
+            left: 0,
+            right: 0,
             borderRadius: 33, 
             overflow: 'hidden', 
             backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)' 
