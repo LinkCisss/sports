@@ -68,7 +68,7 @@ export function MatchCard({ matchData, league, time, team1, team2, oddsList }: M
         backgroundColor: colors.cardBackground, 
         overflow: 'hidden', 
         borderWidth: 1, 
-        borderColor: colors.border 
+        borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)' 
       }
     ]}>
       {/* Liquid Glass Background Blobs */}

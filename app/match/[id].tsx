@@ -327,9 +327,9 @@ export default function MatchDetailScreen() {
             matchData.bookmakers.map(bookmaker => (
               <View key={bookmaker.key} style={[
                 styles.bookmakerCard, 
-                { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }
+                { backgroundColor: colors.cardBackground, overflow: 'hidden', borderWidth: 1, borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)' }
               ]}>
-                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                 <Text style={[styles.bookmakerTitle, { color: colors.text }]}>{bookmaker.title}</Text>
                 
                 {renderMarket(bookmaker, 'h2h', isZh ? '胜平负 (Moneyline)' : 'Moneyline (H2H)')}
@@ -345,8 +345,8 @@ export default function MatchDetailScreen() {
             return (
               <View style={styles.lineupContainer}>
                 {/* Tactical Board Selector */}
-                <View style={[styles.lineupHeaderCard, { backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
-                  <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                <View style={[styles.lineupHeaderCard, { backgroundColor: colors.cardBackground, borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
+                  <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                   
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
                     {/* Home Coach / Formation */}
@@ -392,8 +392,8 @@ export default function MatchDetailScreen() {
                 <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24, marginBottom: 12 }]}>{isZh ? '首发名单' : 'Starting XI'}</Text>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   {/* Home Starting XI */}
-                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
-                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                     <View style={{ padding: 12 }}>
                       {lineups.home.startingXI.map((player) => (
                         <View key={player.number} style={styles.playerRow}>
@@ -412,8 +412,8 @@ export default function MatchDetailScreen() {
                   </View>
 
                   {/* Away Starting XI */}
-                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
-                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                     <View style={{ padding: 12 }}>
                       {lineups.away.startingXI.map((player) => (
                         <View key={player.number} style={styles.playerRow}>
@@ -436,8 +436,8 @@ export default function MatchDetailScreen() {
                 <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20, marginBottom: 12 }]}>{isZh ? '替补名单' : 'Substitutes'}</Text>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   {/* Home Substitutes */}
-                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
-                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                     <View style={{ padding: 12 }}>
                       {lineups.home.substitutes.map((player) => (
                         <View key={player.number} style={styles.playerRow}>
@@ -456,8 +456,8 @@ export default function MatchDetailScreen() {
                   </View>
 
                   {/* Away Substitutes */}
-                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: colors.border, borderWidth: 1 }]}>
-                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                  <View style={[styles.squadCard, { flex: 1, backgroundColor: colors.cardBackground, borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
+                    <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                     <View style={{ padding: 12 }}>
                       {lineups.away.substitutes.map((player) => (
                         <View key={player.number} style={styles.playerRow}>

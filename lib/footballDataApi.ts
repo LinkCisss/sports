@@ -305,16 +305,18 @@ const MOCK_MATCHES: FootballDataMatch[] = [
 ];
 
 // Helper to fetch with local caching
-const fetchWithCache = async <T>(cacheKey: string, endpoint: string): Promise<T | null> => {
+const fetchWithCache = async <T>(cacheKey: string, endpoint: string, forceRefresh = false): Promise<T | null> => {
   try {
-    const cachedData = await AsyncStorage.getItem(cacheKey);
-    const cachedTime = await AsyncStorage.getItem(`${cacheKey}_time`);
-    
-    if (cachedData && cachedTime) {
-      const parsedTime = parseInt(cachedTime, 10);
-      if (Date.now() - parsedTime < CACHE_DURATION_MS) {
-        console.log(`[FootballData] Returning cached data for ${cacheKey}`);
-        return JSON.parse(cachedData) as T;
+    if (!forceRefresh) {
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      const cachedTime = await AsyncStorage.getItem(`${cacheKey}_time`);
+      
+      if (cachedData && cachedTime) {
+        const parsedTime = parseInt(cachedTime, 10);
+        if (Date.now() - parsedTime < CACHE_DURATION_MS) {
+          console.log(`[FootballData] Returning cached data for ${cacheKey}`);
+          return JSON.parse(cachedData) as T;
+        }
       }
     }
     
@@ -342,8 +344,8 @@ const fetchWithCache = async <T>(cacheKey: string, endpoint: string): Promise<T 
   }
 };
 
-export const fetchWorldCupStandings = async (): Promise<FootballDataStandingsResponse> => {
-  const data = await fetchWithCache<FootballDataStandingsResponse>('wc_standings', '/competitions/WC/standings');
+export const fetchWorldCupStandings = async (forceRefresh = false): Promise<FootballDataStandingsResponse> => {
+  const data = await fetchWithCache<FootballDataStandingsResponse>('wc_standings', '/competitions/WC/standings', forceRefresh);
   if (data && data.standings && data.standings.length > 0) {
     return data;
   }
@@ -351,8 +353,8 @@ export const fetchWorldCupStandings = async (): Promise<FootballDataStandingsRes
   return { standings: MOCK_STANDINGS };
 };
 
-export const fetchWorldCupMatches = async (): Promise<FootballDataMatchesResponse> => {
-  const data = await fetchWithCache<FootballDataMatchesResponse>('wc_matches', '/competitions/WC/matches');
+export const fetchWorldCupMatches = async (forceRefresh = false): Promise<FootballDataMatchesResponse> => {
+  const data = await fetchWithCache<FootballDataMatchesResponse>('wc_matches', '/competitions/WC/matches', forceRefresh);
   if (data && data.matches && data.matches.length > 0) {
     return data;
   }

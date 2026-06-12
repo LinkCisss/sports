@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, View, Text, ActivityIndicator, RefreshControl, Pressable, Platform } from 'react-native';
 import { Link } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MatchCard } from '@/components/MatchCard';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
@@ -137,10 +138,30 @@ export default function HomeScreen() {
           style={StyleSheet.absoluteFill} 
         />
         
-        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-          <Text style={[styles.dateText, { color: colors.text }]}>
+        <View style={{ paddingHorizontal: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={[styles.dateText, { color: colors.text, marginBottom: 0 }]}>
             {isZh ? '赔率' : 'Odds'}
           </Text>
+          <Pressable 
+            onPress={onRefresh}
+            style={[{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              paddingHorizontal: 10, 
+              paddingVertical: 6, 
+              borderRadius: 12, 
+              backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)' 
+            }]}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={colors.text} style={{ transform: [{ scale: 0.7 }] }} />
+            ) : (
+              <FontAwesome name="refresh" size={11} color={colors.text} />
+            )}
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text, marginLeft: 4 }}>
+              {isZh ? '刷新' : 'Refresh'}
+            </Text>
+          </Pressable>
         </View>
 
         {/* Date Switcher */}

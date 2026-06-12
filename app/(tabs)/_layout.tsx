@@ -1,7 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Platform, View, Pressable, Dimensions } from 'react-native';
+import { StyleSheet, Platform, View, Pressable, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
@@ -20,6 +20,10 @@ function TabBarIcon(props: {
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+
+  const tabWidth = 320;
+  const sideMargin = Math.max(12, (SCREEN_WIDTH - tabWidth) / 2);
 
   return (
     <Tabs
@@ -40,8 +44,8 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 30 : 20,
-          left: 24,
-          right: 24,
+          left: sideMargin,
+          right: sideMargin,
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',

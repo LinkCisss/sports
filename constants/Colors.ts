@@ -6,7 +6,7 @@ export const Colors = {
     text: '#0F172A',            // Deep slate-charcoal (very high contrast, extremely readable)
     textSecondary: '#475569',   // Mid slate for subtitles and captions
     background: '#F8FAFC',      // Soft, clean iOS-style slate-white background
-    cardBackground: 'rgba(255, 255, 255, 0.65)', // Frosted white glassmorphic card transparency
+    cardBackground: 'rgba(255, 255, 255, 0.28)', // Frosted white glassmorphic card transparency
     tint: tintColorLight,
     icon: '#64748B',
     tabIconDefault: '#94A3B8',
@@ -26,7 +26,7 @@ export const Colors = {
     text: '#F1F5F9',            // Off-white for dark mode readability
     textSecondary: '#94A3B8',   // Soft muted slate
     background: '#0A0E17',      // Deep dark navy base
-    cardBackground: 'rgba(21, 29, 45, 0.7)', // Dark glass transparency
+    cardBackground: 'rgba(15, 23, 42, 0.35)', // Dark glass transparency
     tint: tintColorDark,
     icon: '#64748B',
     tabIconDefault: '#64748B',

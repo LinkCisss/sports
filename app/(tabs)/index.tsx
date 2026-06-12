@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable, Platform, Dimensions, Modal } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, ActivityIndicator, Pressable, Platform, Dimensions, Modal, RefreshControl, Image } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -12,10 +12,12 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { fetchWorldCupStandings, fetchWorldCupMatches, FootballDataMatch, GroupStanding } from '@/lib/footballDataApi';
 import { fetchLiveMatchesWithOdds } from '@/lib/oddsApi';
+import { fetchCsgoMatches, CsgoMatch } from '@/lib/csgoDataApi';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
 import { getMatchLineup } from '@/lib/lineupGenerator';
 import { TacticalPitch } from '@/components/TacticalPitch';
+import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -62,6 +64,11 @@ const STAGES = [
   { key: 'FINAL', labelZh: '决赛', labelEn: 'Final' },
 ];
 
+const CSGO_STAGES = [
+  { key: 'CHAMPIONS_STAGE', labelZh: '冠军赛', labelEn: 'Champions Stage' },
+  { key: 'LEGENDS_STAGE', labelZh: '传奇赛', labelEn: 'Legends Stage' },
+];
+
 const TEAM_FLAG_COLORS: Record<string, string[]> = {
   "Mexico": ["#006847", "#CE1126"],
   "South Africa": ["#007C3F", "#FFB612"],
@@ -88,6 +95,65 @@ const TEAM_FLAG_COLORS: Record<string, string[]> = {
   "Australia": ["#00008B", "#FF0000"],
 };
 
+const CSGO_TEAM_COLORS: Record<string, string[]> = {
+  "G2 Esports": ["#3E3E3E", "#FFFFFF"],
+  "Natus Vincere": ["#FFF200", "#000000"],
+  "Team Vitality": ["#FFE500", "#1A1A1A"],
+  "FaZe Clan": ["#E50000", "#000000"],
+  "MOUZ": ["#C8102E", "#000000"],
+  "Astralis": ["#EF3E42", "#FFFFFF"],
+  "Team Liquid": ["#0F2537", "#FFFFFF"],
+  "Virtus.pro": ["#FF5E00", "#000000"],
+};
+
+const getTeamAbbreviation = (name: string, tla: string): string => {
+  if (name.includes('G2')) return 'G2';
+  if (name.includes('Natus') || name.includes('Navi')) return 'NaVi';
+  if (name.includes('Vitality')) return 'Vitality';
+  if (name.includes('FaZe')) return 'FaZe';
+  if (name.includes('MOUZ') || name.includes('Mouz')) return 'MOUZ';
+  if (name.includes('Astralis')) return 'Astralis';
+  if (name.includes('Liquid')) return 'Liquid';
+  if (name.includes('Virtus')) return 'VP';
+  return tla;
+};
+
+const renderTeamEmblem = (teamName: string, size: number = 20, isFinished: boolean = false) => {
+  const tColors = CSGO_TEAM_COLORS[teamName] || ['#3A86FF', '#8338EC'];
+  let initials = '';
+  if (teamName.includes('G2')) {
+    initials = 'G2';
+  } else if (teamName.includes('Natus') || teamName.includes('Navi')) {
+    initials = 'NV';
+  } else if (teamName.includes('Virtus')) {
+    initials = 'VP';
+  } else {
+    initials = teamName.split(' ')[0].substring(0, size > 30 ? 2 : 1).toUpperCase();
+  }
+  
+  return (
+    <View style={{
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      backgroundColor: tColors[0],
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: size > 30 ? 3 : 1.5,
+      borderColor: 'rgba(255,255,255,0.2)',
+      opacity: isFinished ? 0.7 : 1,
+    }}>
+      <Text style={{
+        color: tColors[1] === '#000000' || tColors[1] === '#1A1A1A' ? '#FFFFFF' : tColors[1],
+        fontSize: size > 30 ? 18 : 9,
+        fontWeight: '900',
+      }}>
+        {initials}
+      </Text>
+    </View>
+  );
+};
+
 const getTeamColors = (teamName: string): string[] => {
   return TEAM_FLAG_COLORS[teamName] || ['#3A86FF', '#8338EC'];
 };
@@ -97,6 +163,13 @@ export default function ScheduleScreen() {
   const colors = Colors[theme];
   const { t, i18n } = useTranslation();
   const isZh = i18n.language.startsWith('zh');
+
+  const [currentSport, setCurrentSport] = useState<'world_cup' | 'csgo' | 'nba'>('world_cup');
+  const [showMenu, setShowMenu] = useState(false);
+  const [csgoMatches, setCsgoMatches] = useState<CsgoMatch[]>([]);
+  const [csgoLoading, setCsgoLoading] = useState(false);
+  const [csgoSelectedStage, setCsgoSelectedStage] = useState<'CHAMPIONS_STAGE' | 'LEGENDS_STAGE'>('CHAMPIONS_STAGE');
+  const [selectedCsgoDetailMatch, setSelectedCsgoDetailMatch] = useState<CsgoMatch | null>(null);
 
   const [selectedStage, setSelectedStage] = useState('GROUP_STAGE');
   const groupScrollRef = React.useRef<ScrollView>(null);
@@ -110,6 +183,7 @@ export default function ScheduleScreen() {
   const [standings, setStandings] = useState<GroupStanding[]>([]);
   const [groupMatches, setGroupMatches] = useState<FootballDataMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Shared values for modal PK background blobs
   const pkScale1 = useSharedValue(1);
@@ -163,37 +237,66 @@ export default function ScheduleScreen() {
     return 'GROUP_STAGE';
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const standingsRes = await fetchWorldCupStandings();
-        const matchesRes = await fetchWorldCupMatches();
-        
-        if (standingsRes?.standings) {
-          setStandings(standingsRes.standings);
-        }
-        if (matchesRes?.matches) {
-          // Filter out group stage matches specifically
-          const groupFixtures = matchesRes.matches.filter(m => m.stage === 'GROUP_STAGE');
-          setGroupMatches(groupFixtures);
-          
-          // Auto-select the active stage based on tournament progression dates
-          const active = determineActiveStage(matchesRes.matches);
-          setSelectedStage(active);
-        }
-      } catch (err) {
-        console.error('Error loading schedule data:', err);
-      } finally {
-        setLoading(false);
+  const loadData = async (showLoadingIndicator = true, forceRefresh = false) => {
+    if (showLoadingIndicator) setLoading(true);
+    try {
+      const standingsRes = await fetchWorldCupStandings(forceRefresh);
+      const matchesRes = await fetchWorldCupMatches(forceRefresh);
+      
+      if (standingsRes?.standings) {
+        setStandings(standingsRes.standings);
       }
-    };
-    loadData();
+      if (matchesRes?.matches) {
+        // Filter out group stage matches specifically
+        const groupFixtures = matchesRes.matches.filter(m => m.stage === 'GROUP_STAGE');
+        setGroupMatches(groupFixtures);
+        
+        // Auto-select the active stage based on tournament progression dates
+        const active = determineActiveStage(matchesRes.matches);
+        setSelectedStage(active);
+      }
+    } catch (err) {
+      console.error('Error loading schedule data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCsgoData = async (showLoadingIndicator = true) => {
+    if (showLoadingIndicator) setCsgoLoading(true);
+    try {
+      const res = await fetchCsgoMatches();
+      setCsgoMatches(res);
+    } catch (err) {
+      console.error('Error loading CS:GO data:', err);
+    } finally {
+      setCsgoLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentSport === 'csgo' && csgoMatches.length === 0) {
+      loadCsgoData(true);
+    }
+  }, [currentSport]);
+
+  useEffect(() => {
+    loadData(true, false);
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (currentSport === 'world_cup') {
+      await loadData(false, true);
+    } else if (currentSport === 'csgo') {
+      await loadCsgoData(false);
+    }
+    setRefreshing(false);
+  };
 
   // Animate PK details screen blobs when match is selected & load real odds
   useEffect(() => {
-    if (selectedDetailMatch) {
+    if (selectedDetailMatch || selectedCsgoDetailMatch) {
       pkScale1.value = 1;
       pkTx1.value = 0;
       pkTy1.value = 0;
@@ -209,63 +312,65 @@ export default function ScheduleScreen() {
       pkTx2.value = withRepeat(withTiming(-SCREEN_WIDTH * 0.18, { duration: 7500 }), -1, true);
       pkTy2.value = withRepeat(withTiming(-SCREEN_HEIGHT * 0.08, { duration: 8500 }), -1, true);
 
-      // Fetch real odds dynamically
-      const loadRealOdds = async () => {
-        setLoadingOdds(true);
-        setRealOdds(null);
-        try {
-          const homeName = selectedDetailMatch.homeTeam.name.toLowerCase();
-          const awayName = selectedDetailMatch.awayTeam.name.toLowerCase();
+      if (selectedDetailMatch) {
+        // Fetch real odds dynamically
+        const loadRealOdds = async () => {
+          setLoadingOdds(true);
+          setRealOdds(null);
+          try {
+            const homeName = selectedDetailMatch.homeTeam.name.toLowerCase();
+            const awayName = selectedDetailMatch.awayTeam.name.toLowerCase();
 
-          // Fetch matches from The Odds API for FIFA World Cup
-          const oddsEvents = await fetchLiveMatchesWithOdds('soccer_fifa_world_cup');
-          
-          // Find matching event
-          const matched = oddsEvents.find(o => {
-            const apiHome = o.home_team.toLowerCase();
-            const apiAway = o.away_team.toLowerCase();
+            // Fetch matches from The Odds API for FIFA World Cup
+            const oddsEvents = await fetchLiveMatchesWithOdds('soccer_fifa_world_cup');
             
-            return (
-              (apiHome.includes(homeName) || homeName.includes(apiHome)) &&
-              (apiAway.includes(awayName) || awayName.includes(apiAway))
-            ) || (
-              (apiHome.includes(awayName) || awayName.includes(apiHome)) &&
-              (apiAway.includes(homeName) || homeName.includes(apiAway))
-            );
-          });
+            // Find matching event
+            const matched = oddsEvents.find(o => {
+              const apiHome = o.home_team.toLowerCase();
+              const apiAway = o.away_team.toLowerCase();
+              
+              return (
+                (apiHome.includes(homeName) || homeName.includes(apiHome)) &&
+                (apiAway.includes(awayName) || awayName.includes(apiAway))
+              ) || (
+                (apiHome.includes(awayName) || awayName.includes(apiHome)) &&
+                (apiAway.includes(homeName) || homeName.includes(apiAway))
+              );
+            });
 
-          if (matched && matched.bookmakers && matched.bookmakers.length > 0) {
-            // Find first bookmaker with h2h market
-            const bookmaker = matched.bookmakers[0];
-            const market = bookmaker.markets.find(m => m.key === 'h2h');
-            if (market && market.outcomes) {
-              const homeOutcome = market.outcomes.find(o => o.name.toLowerCase() === matched.home_team.toLowerCase());
-              const awayOutcome = market.outcomes.find(o => o.name.toLowerCase() === matched.away_team.toLowerCase());
-              const drawOutcome = market.outcomes.find(o => o.name.toLowerCase() === 'draw' || o.name.toLowerCase() === '平局');
+            if (matched && matched.bookmakers && matched.bookmakers.length > 0) {
+              // Find first bookmaker with h2h market
+              const bookmaker = matched.bookmakers[0];
+              const market = bookmaker.markets.find(m => m.key === 'h2h');
+              if (market && market.outcomes) {
+                const homeOutcome = market.outcomes.find(o => o.name.toLowerCase() === matched.home_team.toLowerCase());
+                const awayOutcome = market.outcomes.find(o => o.name.toLowerCase() === matched.away_team.toLowerCase());
+                const drawOutcome = market.outcomes.find(o => o.name.toLowerCase() === 'draw' || o.name.toLowerCase() === '平局');
 
-              if (homeOutcome && awayOutcome) {
-                const homeTla = selectedDetailMatch.homeTeam.tla || homeOutcome.name.substring(0, 3).toUpperCase();
-                const awayTla = selectedDetailMatch.awayTeam.tla || awayOutcome.name.substring(0, 3).toUpperCase();
-                
-                setRealOdds({
-                  homeOdds: `${homeTla} ${homeOutcome.price.toFixed(2)}`,
-                  drawOdds: isZh ? `平局 ${drawOutcome ? drawOutcome.price.toFixed(2) : '-'}` : `Draw ${drawOutcome ? drawOutcome.price.toFixed(2) : '-'}`,
-                  awayOdds: `${awayTla} ${awayOutcome.price.toFixed(2)}`
-                });
+                if (homeOutcome && awayOutcome) {
+                  const homeTla = selectedDetailMatch.homeTeam.tla || homeOutcome.name.substring(0, 3).toUpperCase();
+                  const awayTla = selectedDetailMatch.awayTeam.tla || awayOutcome.name.substring(0, 3).toUpperCase();
+                  
+                  setRealOdds({
+                    homeOdds: `${homeTla} ${homeOutcome.price.toFixed(2)}`,
+                    drawOdds: isZh ? `平局 ${drawOutcome ? drawOutcome.price.toFixed(2) : '-'}` : `Draw ${drawOutcome ? drawOutcome.price.toFixed(2) : '-'}`,
+                    awayOdds: `${awayTla} ${awayOutcome.price.toFixed(2)}`
+                  });
+                }
               }
             }
+          } catch (err) {
+            console.error('Error matching real odds:', err);
+          } finally {
+            setLoadingOdds(false);
           }
-        } catch (err) {
-          console.error('Error matching real odds:', err);
-        } finally {
-          setLoadingOdds(false);
-        }
-      };
-      loadRealOdds();
+        };
+        loadRealOdds();
+      }
     } else {
       setRealOdds(null);
     }
-  }, [selectedDetailMatch]);
+  }, [selectedDetailMatch, selectedCsgoDetailMatch]);
 
   // Format date and time (FORCED TO CHINA STANDARD TIME / UTC+8)
   const formatUtcDate = (utcDate: string) => {
@@ -307,6 +412,18 @@ export default function ScheduleScreen() {
 
   const groupedFixtures = groupMatchesByDate(groupMatches);
 
+  const filteredCsgoMatches = csgoMatches.filter(m => m.stage === csgoSelectedStage);
+  const groupCsgoMatchesByDate = (list: CsgoMatch[]) => {
+    const map: Record<string, CsgoMatch[]> = {};
+    list.forEach(m => {
+      const dateStr = formatUtcDate(m.utcDate);
+      if (!map[dateStr]) map[dateStr] = [];
+      map[dateStr].push(m);
+    });
+    return Object.keys(map).map(date => ({ date, data: map[date] }));
+  };
+  const groupedCsgoFixtures = groupCsgoMatchesByDate(filteredCsgoMatches);
+
   // Group names formatting
   const getGroupName = (groupKey: string) => {
     const letter = groupKey.replace('GROUP_', '');
@@ -325,10 +442,18 @@ export default function ScheduleScreen() {
 
   // Render Standings
   const renderStandings = (inModal: boolean = false) => (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, inModal && { paddingTop: 4 }]}>
+    <ScrollView 
+      showsVerticalScrollIndicator={false} 
+      contentContainerStyle={[styles.scrollContent, inModal && { paddingTop: 4 }]}
+      refreshControl={
+        !inModal ? (
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        ) : undefined
+      }
+    >
       {standings.map((group) => (
-        <View key={group.group} style={[styles.glassCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-          <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+        <View key={group.group} style={[styles.glassCard, { borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', backgroundColor: colors.cardBackground }]}>
+          <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
           
           <View style={styles.tableHeaderRow}>
             <Text style={[styles.groupTitle, { color: colors.text }]}>{getGroupName(group.group)}</Text>
@@ -385,6 +510,9 @@ export default function ScheduleScreen() {
       ref={groupScrollRef}
       showsVerticalScrollIndicator={false} 
       contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+      }
     >
       {groupedFixtures.map((groupDay) => (
         <View 
@@ -409,12 +537,12 @@ export default function ScheduleScreen() {
                 onPress={() => setSelectedDetailMatch(match)}
                 style={({ pressed }) => [
                   styles.matchCard, 
-                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                  { borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', backgroundColor: colors.cardBackground },
                   isFinished && { opacity: 0.6 },
                   pressed && { opacity: 0.85 }
                 ]}
               >
-                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                 
                 {/* Match sub-header */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, zIndex: 5 }}>
@@ -546,7 +674,13 @@ export default function ScheduleScreen() {
   const renderKnockouts = () => {
     const list = KNOCKOUT_MATCHES_BY_STAGE[selectedStage] || [];
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }
+      >
         {list.map((item, idx) => {
           const isEven = idx % 2 === 0;
           return (
@@ -570,11 +704,11 @@ export default function ScheduleScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.bracketMatchCard, 
-                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                  { borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', backgroundColor: colors.cardBackground },
                   pressed && { opacity: 0.85 }
                 ]}
               >
-                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={40} style={StyleSheet.absoluteFill} />
+                <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
                 
                 {/* Date header */}
                 <Text style={[styles.bracketDateText, { color: colors.textSecondary }]}>
@@ -756,6 +890,7 @@ export default function ScheduleScreen() {
 
           {/* Betting Odds Card */}
           <View style={styles.pkGlassCard}>
+            <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
             <Text style={styles.pkCardTitle}>{isZh ? '博彩赔率' : 'Betting Odds'}</Text>
             {loadingOdds ? (
               <ActivityIndicator size="small" color="#FFFFFF" style={{ marginVertical: 12 }} />
@@ -783,6 +918,7 @@ export default function ScheduleScreen() {
             const lineups = getMatchLineup(homeName, awayName);
             return (
               <View style={styles.pkGlassCard}>
+                <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
                 <Text style={styles.pkCardTitle}>{isZh ? '首发及战术阵容' : 'Starting Lineups'}</Text>
                 
                 {/* Formations and Coaches */}
@@ -858,6 +994,7 @@ export default function ScheduleScreen() {
           {/* Group Standings Card (If applicable) */}
           {groupStanding && (
             <View style={styles.pkGlassCard}>
+              <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
               <Text style={styles.pkCardTitle}>
                 {getGroupName(groupStanding.group)} {isZh ? '积分表' : 'Standings'}
               </Text>
@@ -954,61 +1091,643 @@ export default function ScheduleScreen() {
     }
   }, [selectedStage, groupSubTab, loading]);
 
+  const renderNbaSchedule = () => (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
+      <FontAwesome name="dribbble" size={64} color="#FF8200" style={{ marginBottom: 16, opacity: 0.8 }} />
+      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
+        {isZh ? 'NBA 赛程数据' : 'NBA Schedule'}
+      </Text>
+      <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 }}>
+        {isZh ? '当前未配置 NBA API，你可以在右上角切换到 CS:GO 赛程进行完整的赛程与赔率交互。' : 'NBA API is not configured yet. Toggle to CS:GO in the top-right corner to interact with full match and odds views.'}
+      </Text>
+    </View>
+  );
+
+  const renderCsgoSchedule = () => {
+    if (csgoLoading) {
+      return (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={colors.accent} />
+        </View>
+      );
+    }
+
+    if (groupedCsgoFixtures.length === 0) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 }}>
+          <Text style={{ color: colors.textSecondary }}>
+            {isZh ? '没有找到赛程信息' : 'No matches found'}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }
+      >
+        {groupedCsgoFixtures.map((groupDay) => (
+          <View key={groupDay.date} style={styles.dateSection}>
+            <Text style={[styles.dateSectionTitle, { color: colors.text }]}>{groupDay.date}</Text>
+            
+            {groupDay.data.map((match) => {
+              const isFinished = match.status === 'FINISHED';
+              const isLive = match.status === 'IN_PLAY';
+              
+              return (
+                <Pressable 
+                  key={match.id} 
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setSelectedCsgoDetailMatch(match);
+                  }}
+                  style={({ pressed }) => [
+                    styles.matchCard, 
+                    { borderColor: theme === 'light' ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.15)', backgroundColor: colors.cardBackground },
+                    isFinished && { opacity: 0.65 },
+                    pressed && { opacity: 0.85 }
+                  ]}
+                >
+                  <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={70} style={StyleSheet.absoluteFill} />
+                  
+                  {/* Match sub-header */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, zIndex: 5 }}>
+                    <Text style={[styles.matchSubHeader, { color: colors.textSecondary, marginBottom: 0 }]}>
+                      {match.tournamentName}
+                    </Text>
+                    {isFinished && (
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary }}>
+                        {isZh ? '已完赛' : 'FT'}
+                      </Text>
+                    )}
+                    {isLive && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF3B30', marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#FF3B30' }}>
+                          {isZh ? '直播中' : 'LIVE'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  {/* Match row */}
+                  <View style={styles.matchMainRow}>
+                    {/* Home Team */}
+                    <View style={[styles.teamColumn, { alignItems: 'flex-end' }]}>
+                      <View style={styles.teamRowAlign}>
+                        <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
+                          <Text style={[
+                            { fontSize: 15, fontWeight: '700', color: colors.text },
+                            isFinished && match.score.home < match.score.away && { color: colors.textSecondary, fontWeight: 'normal' },
+                            isFinished && match.score.home > match.score.away && { fontWeight: 'bold' }
+                          ]} numberOfLines={1}>
+                            {getTeamAbbreviation(match.homeTeam.name, match.homeTeam.tla)}
+                          </Text>
+                          <Text style={{ fontSize: 9, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                            {match.homeTeam.name}
+                          </Text>
+                        </View>
+                        {renderTeamEmblem(match.homeTeam.name, 20, isFinished)}
+                      </View>
+                    </View>
+
+                    {/* Score / Center */}
+                    <View style={styles.timeCenterBox}>
+                      {isFinished || isLive ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 18, fontWeight: '800', color: isLive ? '#FF3B30' : colors.text }}>
+                            {match.score.home}
+                          </Text>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginHorizontal: 8 }}>
+                            -
+                          </Text>
+                          <Text style={{ fontSize: 18, fontWeight: '800', color: isLive ? '#FF3B30' : colors.text }}>
+                            {match.score.away}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={[styles.timeText, { color: colors.text }]}>
+                          {formatUtcTime(match.utcDate)}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Away Team */}
+                    <View style={[styles.teamColumn, { alignItems: 'flex-start' }]}>
+                      <View style={styles.teamRowAlign}>
+                        {renderTeamEmblem(match.awayTeam.name, 20, isFinished)}
+                        <View style={{ alignItems: 'flex-start', marginLeft: 8 }}>
+                          <Text style={[
+                            { fontSize: 15, fontWeight: '700', color: colors.text },
+                            isFinished && match.score.home > match.score.away && { color: colors.textSecondary, fontWeight: 'normal' },
+                            isFinished && match.score.home < match.score.away && { fontWeight: 'bold' }
+                          ]} numberOfLines={1}>
+                            {getTeamAbbreviation(match.awayTeam.name, match.awayTeam.tla)}
+                          </Text>
+                          <Text style={{ fontSize: 9, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                            {match.awayTeam.name}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Simulated Odds Tag */}
+                  {match.odds && match.odds.length > 0 && !isFinished && (
+                    <View style={{ marginTop: 8, alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 6 }}>
+                      <Text style={{ fontSize: 10, color: colors.textSecondary }}>
+                        {isZh ? '平均赔率：' : 'Avg Odds: '}
+                        <Text style={{ color: colors.accent, fontWeight: '600' }}>
+                          {getTeamAbbreviation(match.homeTeam.name, match.homeTeam.tla)} {match.odds[0].homeOdds.toFixed(2)} vs {getTeamAbbreviation(match.awayTeam.name, match.awayTeam.tla)} {match.odds[0].awayOdds.toFixed(2)}
+                        </Text>
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    );
+  };
+
+  const renderCsgoDetailModal = () => {
+    if (!selectedCsgoDetailMatch) return null;
+    
+    const { homeTeam, awayTeam, score, status, utcDate, maps, lineups, odds, tournamentName } = selectedCsgoDetailMatch;
+    
+    const homeColors = CSGO_TEAM_COLORS[homeTeam.name] || ['#3A86FF', '#8338EC'];
+    const awayColors = CSGO_TEAM_COLORS[awayTeam.name] || ['#8338EC', '#3A86FF'];
+    const leftBlobColor = homeColors[0];
+    const rightBlobColor = awayColors[0];
+
+    const isLive = status === 'IN_PLAY';
+
+    return (
+      <Modal
+        visible={!!selectedCsgoDetailMatch}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setSelectedCsgoDetailMatch(null)}
+      >
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0C0D12' }]}>
+          {/* Dynamic Fluid Background */}
+          <View style={styles.pkBackgroundContainer}>
+            <Animated.View style={[
+              styles.pkBlobLeft, 
+              { backgroundColor: leftBlobColor },
+              pkAnimatedBlob1
+            ]} />
+            <Animated.View style={[
+              styles.pkBlobRight, 
+              { backgroundColor: rightBlobColor },
+              pkAnimatedBlob2
+            ]} />
+            <BlurView tint="dark" intensity={70} style={StyleSheet.absoluteFill} />
+          </View>
+
+          {/* Back button */}
+          <View style={[styles.pkHeaderRow, { paddingTop: Platform.OS === 'ios' ? 64 : 54 }]}>
+            <Pressable 
+              onPress={() => setSelectedCsgoDetailMatch(null)} 
+              style={styles.pkIconBtn}
+            >
+              <FontAwesome name="chevron-left" size={18} color="#FFFFFF" />
+            </Pressable>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>
+              {isZh ? '赛事详情' : 'Match Details'}
+            </Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.pkScrollContent}
+          >
+            {/* Tournament Name */}
+            <Text style={styles.pkStageTitle}>
+              {tournamentName}
+            </Text>
+
+            {/* Duel Header */}
+            <View style={styles.pkMainRow}>
+              {/* Home Team */}
+              <View style={styles.pkTeamCol}>
+                <View style={{ marginBottom: 8 }}>
+                  {renderTeamEmblem(homeTeam.name, 60)}
+                </View>
+                <Text style={[styles.pkTeamName, { fontSize: 18, fontWeight: '800' }]} numberOfLines={1}>
+                  {getTeamAbbreviation(homeTeam.name, homeTeam.tla)}
+                </Text>
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2, textAlign: 'center' }} numberOfLines={1}>
+                  {homeTeam.name}
+                </Text>
+              </View>
+
+              {/* Time / Score */}
+              <View style={styles.pkTimeCol}>
+                {status === 'FINISHED' || isLive ? (
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: 2 }}>
+                      {score.home} - {score.away}
+                    </Text>
+                    <View style={[
+                      { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginTop: 8 },
+                      isLive ? { backgroundColor: '#FF3B30' } : { backgroundColor: 'rgba(255,255,255,0.15)' }
+                    ]}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>
+                        {isLive ? 'LIVE' : 'FINISHED'}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={[styles.pkTimeText, { fontSize: 18 }]}>
+                      {formatUtcTime(utcDate)}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                      {isZh ? '等待开始' : 'Upcoming'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Away Team */}
+              <View style={styles.pkTeamCol}>
+                <View style={{ marginBottom: 8 }}>
+                  {renderTeamEmblem(awayTeam.name, 60)}
+                </View>
+                <Text style={[styles.pkTeamName, { fontSize: 18, fontWeight: '800' }]} numberOfLines={1}>
+                  {getTeamAbbreviation(awayTeam.name, awayTeam.tla)}
+                </Text>
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2, textAlign: 'center' }} numberOfLines={1}>
+                  {awayTeam.name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Map-by-map Scores Card */}
+            <View style={styles.pkGlassCard}>
+              <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
+              <Text style={styles.pkCardTitle}>{isZh ? '地图比分' : 'Map Scores'}</Text>
+              
+              {maps.map((map, idx) => {
+                const mapFinished = map.status === 'FINISHED';
+                const mapLive = map.status === 'IN_PLAY';
+                return (
+                  <View key={map.mapName}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                          <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '800' }}>{idx + 1}</Text>
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF' }}>{map.mapName}</Text>
+                      </View>
+                      
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {mapLive && (
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF3B30', marginRight: 8 }} />
+                        )}
+                        <Text style={[
+                          { fontSize: 16, fontWeight: '800' },
+                          mapFinished ? { color: '#FFF' } : (mapLive ? { color: '#FF3B30' } : { color: 'rgba(255,255,255,0.3)' })
+                        ]}>
+                          {map.status !== 'UNPLAYED' ? `${map.homeScore} - ${map.awayScore}` : '- : -'}
+                        </Text>
+                      </View>
+                    </View>
+                    {idx < maps.length - 1 && <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />}
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Odds Card */}
+            {odds && odds.length > 0 && (
+              <View style={styles.pkGlassCard}>
+                <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
+                <Text style={styles.pkCardTitle}>{isZh ? '博彩赔率' : 'Betting Odds'}</Text>
+                <View style={styles.pkStandingsHeader}>
+                  <Text style={[styles.pkStandingsColTeam, { color: 'rgba(255,255,255,0.4)', flex: 1.5 }]}>
+                    {isZh ? '博彩商' : 'Bookmaker'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 32 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.4)', width: 50, textAlign: 'center' }}>
+                      {homeTeam.tla} {isZh ? '胜' : 'Win'}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.4)', width: 50, textAlign: 'center' }}>
+                      {awayTeam.tla} {isZh ? '胜' : 'Win'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.pkCardDivider} />
+                {odds.map(o => (
+                  <View key={o.providerName} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFF', flex: 1.5 }}>{o.providerName}</Text>
+                    <View style={{ flexDirection: 'row', gap: 32 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent, width: 50, textAlign: 'center' }}>{o.homeOdds.toFixed(2)}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent, width: 50, textAlign: 'center' }}>{o.awayOdds.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Player Stats / Lineups Card */}
+            {lineups && (
+              <View style={styles.pkGlassCard}>
+                <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
+                <Text style={styles.pkCardTitle}>{isZh ? '战队阵容与选手数据' : 'Team Lineups & Player Stats'}</Text>
+                
+                {/* Coach info */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{isZh ? '教练' : 'Coach'}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF', marginVertical: 2 }}>{lineups.home.coach}</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)', height: '100%' }} />
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{isZh ? '教练' : 'Coach'}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF', marginVertical: 2 }}>{lineups.away.coach}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.pkCardDivider} />
+                
+                {/* List Headers */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>{homeTeam.name}</Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', textAlign: 'center', width: 90 }}>K/D (ADR) R</Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', textAlign: 'right' }}>{awayTeam.name}</Text>
+                </View>
+
+                {/* Lineup comparison */}
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const pHome = lineups.home.players[i];
+                  const pAway = lineups.away.players[i];
+                  if (!pHome || !pAway) return null;
+                  return (
+                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
+                      {/* Home player info */}
+                      <View style={{ flex: 1.2, flexDirection: 'row', alignItems: 'center' }}>
+                        <View>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFF' }}>{pHome.name}</Text>
+                          <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{pHome.position}</Text>
+                        </View>
+                      </View>
+                      
+                      {/* Compare Stats center */}
+                      <View style={{ width: 100, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '800' }}>
+                          {pHome.rating.toFixed(2)} <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>vs</Text> {pAway.rating.toFixed(2)}
+                        </Text>
+                        <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                          {pHome.kills}/{pHome.deaths} ({pHome.adr.toFixed(0)}) | {pAway.kills}/{pAway.deaths} ({pAway.adr.toFixed(0)})
+                        </Text>
+                      </View>
+
+                      {/* Away player info */}
+                      <View style={{ flex: 1.2, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFF', textAlign: 'right' }}>{pAway.name}</Text>
+                          <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{pAway.position}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            <View style={{ height: 60 }} />
+          </ScrollView>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <LiquidBackground />
+
+      {/* Dim backdrop when Switcher menu is open */}
+      {showMenu && (
+        <Pressable 
+          style={[StyleSheet.absoluteFill, { zIndex: 99, backgroundColor: 'rgba(0,0,0,0.3)' }]} 
+          onPress={() => setShowMenu(false)} 
+        />
+      )}
       
       {/* Header Container */}
-      <View style={styles.rootHeader}>
-        <View style={styles.headerTitleRow}>
-          <Text style={[styles.title, { color: colors.text }]}>2026 FIFA 世界杯</Text>
-          <FontAwesome name="trophy" size={22} color={colors.gold || '#FFE066'} style={{ marginLeft: 8 }} />
-          
-          {/* Quick link button to view standings modal at any time */}
+      <View style={[styles.rootHeader, { zIndex: 100 }]}>
+        {/* Apple Sports Premium Navigation Bar */}
+        <View style={styles.appleSportsHeaderRow}>
+          {/* Logo Sports */}
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[styles.appleLogo, { color: colors.text }]}></Text>
+            <Text style={[styles.sportsLogoText, { color: colors.text }]}>Sports</Text>
+          </View>
+
+          {/* User Profile Avatar with Switcher Menu */}
           <Pressable 
-            onPress={() => setShowStandingsModal(true)}
-            style={[styles.floatingStandingsBtn, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)' }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              setShowMenu(!showMenu);
+            }}
+            style={styles.avatarButton}
           >
-            <FontAwesome name="list-ol" size={12} color={colors.text} />
+            <Image 
+              source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }} 
+              style={styles.avatarImage} 
+            />
+          </Pressable>
+        </View>
+
+        {/* Switcher floating menu */}
+        {showMenu && (
+          <View style={[styles.switcherMenuCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <BlurView tint={theme === 'light' ? 'systemMaterialLight' : 'systemMaterialDark'} intensity={90} style={StyleSheet.absoluteFill} />
+            
+            <View style={{ paddingVertical: 4 }}>
+              <Text style={[styles.menuSectionHeader, { fontSize: 10, letterSpacing: 1, color: colors.textSecondary }]}>
+                {isZh ? '选择赛事' : 'SELECT SPORT'}
+              </Text>
+              
+              <Pressable 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setCurrentSport('world_cup');
+                  setShowMenu(false);
+                }}
+                style={[styles.menuItem, currentSport === 'world_cup' && styles.menuItemActive, { marginTop: 6 }]}
+              >
+                <FontAwesome name="trophy" size={14} color={currentSport === 'world_cup' ? colors.accent : colors.textSecondary} style={{ width: 20 }} />
+                <Text style={[styles.menuItemText, { color: currentSport === 'world_cup' ? colors.accent : colors.text, fontWeight: currentSport === 'world_cup' ? '700' : 'normal' }]}>
+                  {isZh ? '2026 FIFA 世界杯' : '2026 FIFA World Cup'}
+                </Text>
+                {currentSport === 'world_cup' && <FontAwesome name="check" size={12} color={colors.accent} />}
+              </Pressable>
+
+              <Pressable 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setCurrentSport('nba');
+                  setShowMenu(false);
+                }}
+                style={[styles.menuItem, currentSport === 'nba' && styles.menuItemActive]}
+              >
+                <FontAwesome name="dribbble" size={14} color={currentSport === 'nba' ? colors.accent : colors.textSecondary} style={{ width: 20 }} />
+                <Text style={[styles.menuItemText, { color: currentSport === 'nba' ? colors.accent : colors.text, fontWeight: currentSport === 'nba' ? '700' : 'normal' }]}>
+                  {isZh ? 'NBA' : 'NBA'}
+                </Text>
+                {currentSport === 'nba' && <FontAwesome name="check" size={12} color={colors.accent} />}
+              </Pressable>
+
+              <Pressable 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setCurrentSport('csgo');
+                  setShowMenu(false);
+                }}
+                style={[styles.menuItem, currentSport === 'csgo' && styles.menuItemActive]}
+              >
+                <FontAwesome name="gamepad" size={14} color={currentSport === 'csgo' ? colors.accent : colors.textSecondary} style={{ width: 20 }} />
+                <Text style={[styles.menuItemText, { color: currentSport === 'csgo' ? colors.accent : colors.text, fontWeight: currentSport === 'csgo' ? '700' : 'normal' }]}>
+                  {isZh ? 'CS:GO 赛程' : 'CS:GO Schedule'}
+                </Text>
+                {currentSport === 'csgo' && <FontAwesome name="check" size={12} color={colors.accent} />}
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {/* Current Sport Sub-Header containing Title & Quick Action buttons */}
+        <View style={styles.headerTitleRow}>
+          {currentSport === 'world_cup' && (
+            <>
+              <Text style={[styles.title, { color: colors.text }]}>{isZh ? '2026 FIFA 世界杯' : '2026 FIFA World Cup'}</Text>
+              <FontAwesome name="trophy" size={22} color={colors.gold || '#FFE066'} style={{ marginLeft: 8 }} />
+              
+              <Pressable 
+                onPress={() => setShowStandingsModal(true)}
+                style={[styles.floatingStandingsBtn, { backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)' }]}
+              >
+                <FontAwesome name="list-ol" size={12} color={colors.text} />
+                <Text style={[styles.floatingStandingsBtnText, { color: colors.text }]}>
+                  {isZh ? ' 积分榜' : ' Standings'}
+                </Text>
+              </Pressable>
+            </>
+          )}
+
+          {currentSport === 'csgo' && (
+            <>
+              <Text style={[styles.title, { color: colors.text }]}>{isZh ? 'CS:GO 赛程' : 'CS:GO Schedule'}</Text>
+              <FontAwesome name="gamepad" size={22} color="#00C4FF" style={{ marginLeft: 8 }} />
+            </>
+          )}
+
+          {currentSport === 'nba' && (
+            <>
+              <Text style={[styles.title, { color: colors.text }]}>{isZh ? 'NBA 赛程' : 'NBA Schedule'}</Text>
+              <FontAwesome name="dribbble" size={22} color="#FF8200" style={{ marginLeft: 8 }} />
+            </>
+          )}
+
+          {/* Quick Refresh button */}
+          <Pressable 
+            onPress={onRefresh}
+            style={[styles.floatingStandingsBtn, { marginLeft: 'auto', backgroundColor: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)' }]}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={colors.text} style={{ transform: [{ scale: 0.7 }] }} />
+            ) : (
+              <FontAwesome name="refresh" size={11} color={colors.text} />
+            )}
             <Text style={[styles.floatingStandingsBtnText, { color: colors.text }]}>
-              {isZh ? ' 积分榜' : ' Standings'}
+              {isZh ? ' 刷新' : ' Refresh'}
             </Text>
           </Pressable>
         </View>
 
-        {/* Stage selection bar */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.stageTabBar}
-          contentContainerStyle={styles.stageTabContent}
-        >
-          {STAGES.map((stage) => {
-            const isActive = selectedStage === stage.key;
-            return (
-              <Pressable
-                key={stage.key}
-                onPress={() => setSelectedStage(stage.key)}
-                style={[
-                  styles.stageTabItem,
-                  isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
-                ]}
-              >
-                <Text
+        {/* Conditional Stage selection bar */}
+        {currentSport === 'world_cup' && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.stageTabBar}
+            contentContainerStyle={styles.stageTabContent}
+          >
+            {STAGES.map((stage) => {
+              const isActive = selectedStage === stage.key;
+              return (
+                <Pressable
+                  key={stage.key}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setSelectedStage(stage.key);
+                  }}
                   style={[
-                    styles.stageTabText,
-                    { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                    styles.stageTabItem,
+                    isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
                   ]}
                 >
-                  {isZh ? stage.labelZh : stage.labelEn}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={[
+                      styles.stageTabText,
+                      { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                    ]}
+                  >
+                    {isZh ? stage.labelZh : stage.labelEn}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {currentSport === 'csgo' && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.stageTabBar}
+            contentContainerStyle={styles.stageTabContent}
+          >
+            {CSGO_STAGES.map((stage) => {
+              const isActive = csgoSelectedStage === stage.key;
+              return (
+                <Pressable
+                  key={stage.key}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setCsgoSelectedStage(stage.key as any);
+                  }}
+                  style={[
+                    styles.stageTabItem,
+                    isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.stageTabText,
+                      { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                    ]}
+                  >
+                    {isZh ? stage.labelZh : stage.labelEn}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* Sub-selector for Group stage (Standings vs Matches) */}
-        {selectedStage === 'GROUP_STAGE' && (
+        {currentSport === 'world_cup' && selectedStage === 'GROUP_STAGE' && (
           <View style={styles.subToggleContainer}>
             <Pressable
               onPress={() => setGroupSubTab('standings')}
@@ -1043,18 +1762,24 @@ export default function ScheduleScreen() {
       </View>
 
       {/* Main Content Area */}
-      {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-      ) : (
-        <View style={{ flex: 1 }}>
-          {selectedStage === 'GROUP_STAGE' 
-            ? (groupSubTab === 'standings' ? renderStandings() : renderGroupMatches()) 
-            : renderKnockouts()
-          }
-        </View>
+      {currentSport === 'world_cup' && (
+        loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </View>
+        ) : (
+          <View style={{ flex: 1 }}>
+            {selectedStage === 'GROUP_STAGE' 
+              ? (groupSubTab === 'standings' ? renderStandings() : renderGroupMatches()) 
+              : renderKnockouts()
+            }
+          </View>
+        )
       )}
+
+      {currentSport === 'csgo' && renderCsgoSchedule()}
+
+      {currentSport === 'nba' && renderNbaSchedule()}
 
       {/* Standings Modal Overlay (Always accessible to review standings "与时俱进") */}
       <Modal
@@ -1084,11 +1809,103 @@ export default function ScheduleScreen() {
 
       {/* Match Details Overlay Screen (With PK layout & fluid gradients) */}
       {selectedDetailMatch && renderMatchDetailModal()}
+      {selectedCsgoDetailMatch && renderCsgoDetailModal()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  appleSportsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  appleLogo: {
+    fontSize: 28,
+    fontWeight: '900',
+    marginRight: 2,
+  },
+  sportsLogoText: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  avatarButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF20',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  switcherMenuCard: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 104 : 94,
+    right: 16,
+    width: 260,
+    borderRadius: 16,
+    padding: 16,
+    zIndex: 999,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  menuAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  editBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 12,
+  },
+  menuSection: {
+    gap: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+  },
+  menuItemActive: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  menuItemText: {
+    fontSize: 13,
+    marginLeft: 8,
+    flex: 1,
+  },
+  menuSectionHeader: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 4,
+    paddingLeft: 6,
+  },
   rootHeader: {
     paddingTop: Platform.OS === 'ios' ? 64 : 54,
     paddingBottom: 8,
