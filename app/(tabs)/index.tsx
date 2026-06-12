@@ -100,7 +100,7 @@ export default function ScheduleScreen() {
   const [selectedStage, setSelectedStage] = useState('GROUP_STAGE');
   const groupScrollRef = React.useRef<ScrollView>(null);
   const dateLayouts = React.useRef<Record<string, number>>({});
-  const [groupSubTab, setGroupSubTab] = useState<'standings' | 'matches'>('standings'); // Standings vs Match Schedule
+  const [groupSubTab, setGroupSubTab] = useState<'standings' | 'matches'>('matches'); // Standings vs Match Schedule
   const [showStandingsModal, setShowStandingsModal] = useState(false); // Standings Overlay
   const [selectedDetailMatch, setSelectedDetailMatch] = useState<FootballDataMatch | null>(null); // Interactive Match Detail
   const [realOdds, setRealOdds] = useState<{ homeOdds: string; drawOdds: string; awayOdds: string } | null>(null);
