@@ -40,10 +40,8 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 30 : 20,
-          left: 36,
-          right: 36,
-          width: Dimensions.get('window').width - 72,
-          alignSelf: 'center',
+          left: 24,
+          right: 24,
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: 'transparent',
@@ -61,7 +59,11 @@ export default function TabLayout() {
         },
         tabBarBackground: () => (
           <View style={{ 
-            flex: 1, 
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 24,
+            right: 24,
             borderRadius: 33, 
             overflow: 'hidden', 
             backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)' 
@@ -100,7 +102,7 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, true),
       }}>
       <Tabs.Screen
-        name="schedule"
+        name="index"
         options={{
           title: t('tabs.schedule') || 'Schedule',
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
@@ -108,7 +110,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="odds"
         options={{
           title: t('tabs.scores') || 'Scores',
           tabBarIcon: ({ color }) => <TabBarIcon name="soccer-ball-o" color={color} />,
