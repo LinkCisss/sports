@@ -25,7 +25,7 @@ export interface CsgoMapScore {
 export interface CsgoMatch {
   id: string;
   tournamentName: string;
-  stage: 'LEGENDS_STAGE' | 'CHAMPIONS_STAGE';
+  stage: string;
   utcDate: string;
   status: 'FINISHED' | 'IN_PLAY' | 'TIMED';
   homeTeam: {
@@ -58,135 +58,175 @@ export interface CsgoMatch {
   }[];
 }
 
-const MOCK_CSGO_MATCHES: CsgoMatch[] = [
-  {
-    id: 'csgo_match_1',
-    tournamentName: 'PGL Major Copenhagen 2026',
-    stage: 'CHAMPIONS_STAGE',
-    utcDate: dayjs().subtract(1, 'day').hour(19).minute(0).utc().format(), // Yesterday 19:00 UTC
-    status: 'FINISHED',
-    homeTeam: { id: 'g2', name: 'G2 Esports', tla: 'G2', flagCode: 'DE' },
-    awayTeam: { id: 'navi', name: 'Natus Vincere', tla: 'NAV', flagCode: 'UA' },
-    score: { home: 2, away: 1 },
-    maps: [
-      { mapName: 'Mirage', homeScore: 13, awayScore: 9, status: 'FINISHED', winner: 'HOME' },
-      { mapName: 'Nuke', homeScore: 10, awayScore: 13, status: 'FINISHED', winner: 'AWAY' },
-      { mapName: 'Inferno', homeScore: 13, awayScore: 11, status: 'FINISHED', winner: 'HOME' },
-    ],
-    lineups: {
-      home: {
-        coach: 'TaZ',
-        players: [
-          { name: 'm0NESY', kills: 68, deaths: 42, adr: 88.5, rating: 1.35, position: 'AWPer' },
-          { name: 'NiKo', kills: 61, deaths: 48, adr: 82.4, rating: 1.21, position: 'Rifler' },
-          { name: 'huNter-', kills: 52, deaths: 51, adr: 74.8, rating: 1.05, position: 'Rifler' },
-          { name: 'Snax', kills: 45, deaths: 54, adr: 68.2, rating: 0.94, position: 'IGL' },
-          { name: 'malbsMd', kills: 48, deaths: 50, adr: 72.1, rating: 1.01, position: 'Rifler' },
-        ],
-      },
-      away: {
-        coach: 'B1ad3',
-        players: [
-          { name: 'jL', kills: 63, deaths: 52, adr: 84.1, rating: 1.23, position: 'Rifler' },
-          { name: 'w0nderful', kills: 58, deaths: 48, adr: 78.5, rating: 1.15, position: 'AWPer' },
-          { name: 'b1t', kills: 50, deaths: 54, adr: 71.0, rating: 0.99, position: 'Rifler' },
-          { name: 'iM', kills: 44, deaths: 58, adr: 66.8, rating: 0.91, position: 'Rifler' },
-          { name: 'Aleksib', kills: 41, deaths: 62, adr: 62.4, rating: 0.84, position: 'IGL' },
-        ],
-      },
-    },
-    odds: [
-      { providerName: 'GG.BET', homeOdds: 1.68, awayOdds: 2.15 },
-      { providerName: 'Pinnacle', homeOdds: 1.72, awayOdds: 2.10 },
-      { providerName: 'Thunderpick', homeOdds: 1.65, awayOdds: 2.22 },
-    ],
-  },
-  {
-    id: 'csgo_match_2',
-    tournamentName: 'PGL Major Copenhagen 2026',
-    stage: 'CHAMPIONS_STAGE',
-    utcDate: dayjs().utc().format(), // Live right now!
-    status: 'IN_PLAY',
-    homeTeam: { id: 'vitality', name: 'Team Vitality', tla: 'VIT', flagCode: 'FR' },
-    awayTeam: { id: 'faze', name: 'FaZe Clan', tla: 'FAZ', flagCode: 'US' },
-    score: { home: 1, away: 1 },
-    maps: [
-      { mapName: 'Anubis', homeScore: 13, awayScore: 7, status: 'FINISHED', winner: 'HOME' },
-      { mapName: 'Ancient', homeScore: 9, awayScore: 13, status: 'FINISHED', winner: 'AWAY' },
-      { mapName: 'Mirage', homeScore: 8, awayScore: 5, status: 'IN_PLAY' },
-    ],
-    lineups: {
-      home: {
-        coach: 'XTQZZZ',
-        players: [
-          { name: 'ZywOo', kills: 52, deaths: 31, adr: 92.4, rating: 1.48, position: 'AWPer' },
-          { name: 'Spinx', kills: 45, deaths: 35, adr: 81.0, rating: 1.18, position: 'Rifler' },
-          { name: 'flameZ', kills: 42, deaths: 38, adr: 78.4, rating: 1.12, position: 'Rifler' },
-          { name: 'apEX', kills: 31, deaths: 42, adr: 64.5, rating: 0.89, position: 'IGL' },
-          { name: 'mezii', kills: 35, deaths: 39, adr: 68.0, rating: 0.95, position: 'Rifler' },
-        ],
-      },
-      away: {
-        coach: 'NEO',
-        players: [
-          { name: 'broky', kills: 46, deaths: 38, adr: 79.5, rating: 1.14, position: 'AWPer' },
-          { name: 'ropz', kills: 43, deaths: 41, adr: 76.8, rating: 1.09, position: 'Rifler' },
-          { name: 'frozen', kills: 41, deaths: 42, adr: 75.0, rating: 1.04, position: 'Rifler' },
-          { name: 'rain', kills: 38, deaths: 45, adr: 71.2, rating: 0.96, position: 'Rifler' },
-          { name: 'karrigan', kills: 28, deaths: 49, adr: 58.4, rating: 0.76, position: 'IGL' },
-        ],
-      },
-    },
-    odds: [
-      { providerName: 'GG.BET', homeOdds: 1.42, awayOdds: 2.75 },
-      { providerName: 'Pinnacle', homeOdds: 1.45, awayOdds: 2.62 },
-    ],
-  },
-  {
-    id: 'csgo_match_3',
-    tournamentName: 'PGL Major Copenhagen 2026',
-    stage: 'CHAMPIONS_STAGE',
-    utcDate: dayjs().hour(20).minute(0).second(0).utc().format(), // Today 20:00 UTC
-    status: 'TIMED',
-    homeTeam: { id: 'mouz', name: 'MOUZ', tla: 'MOU', flagCode: 'DE' },
-    awayTeam: { id: 'astralis', name: 'Astralis', tla: 'AST', flagCode: 'DK' },
-    score: { home: 0, away: 0 },
-    maps: [
-      { mapName: 'Mirage', homeScore: 0, awayScore: 0, status: 'UNPLAYED' },
-      { mapName: 'Nuke', homeScore: 0, awayScore: 0, status: 'UNPLAYED' },
-      { mapName: 'Ancient', homeScore: 0, awayScore: 0, status: 'UNPLAYED' },
-    ],
-    odds: [
-      { providerName: 'GG.BET', homeOdds: 1.55, awayOdds: 2.40 },
-      { providerName: 'Pinnacle', homeOdds: 1.58, awayOdds: 2.35 },
-      { providerName: 'Thunderpick', homeOdds: 1.52, awayOdds: 2.48 },
-    ],
-  },
-  {
-    id: 'csgo_match_4',
-    tournamentName: 'PGL Major Copenhagen 2026',
-    stage: 'LEGENDS_STAGE',
-    utcDate: dayjs().add(1, 'day').hour(3).minute(0).second(0).utc().format(), // Tomorrow 03:00 UTC
-    status: 'TIMED',
-    homeTeam: { id: 'liquid', name: 'Team Liquid', tla: 'TL', flagCode: 'US' },
-    awayTeam: { id: 'vp', name: 'Virtus.pro', tla: 'VP', flagCode: 'AM' },
-    score: { home: 0, away: 0 },
-    maps: [
-      { mapName: 'Anubis', homeScore: 0, awayScore: 0, status: 'UNPLAYED' },
-      { mapName: 'Ancient', homeScore: 0, awayScore: 0, status: 'UNPLAYED' },
-      { mapName: 'Dust II', homeScore: 0, awayScore: 0, status: 'UNPLAYED' },
-    ],
-    odds: [
-      { providerName: 'GG.BET', homeOdds: 1.95, awayOdds: 1.85 },
-      { providerName: 'Pinnacle', homeOdds: 1.98, awayOdds: 1.82 },
-    ],
-  },
-];
+const PANDASCORE_API_KEY = 'SltvK9asJ5UAaROQ9bN5IJiv9n_n4_1kH3CI6t78bL6QkMg2iHA';
+const BASE_URL = 'https://api.pandascore.co';
+
+const translateName = (name: string) => {
+  if (!name) return name;
+  return name
+    .replace(/Cologne/ig, '科隆')
+    .replace(/Atlanta/ig, '亚特兰大')
+    .replace(/Astana/ig, '阿斯塔纳')
+    .replace(/Rio/ig, '里约')
+    .replace(/Bucharest/ig, '布加勒斯特')
+    .replace(/Rotterdam/ig, '鹿特丹')
+    .replace(/Fort Worth/ig, '沃斯堡')
+    .replace(/Pro League/ig, 'EPL')
+    .replace(/Showdown/ig, '对抗赛')
+    .replace(/Playoffs/ig, '季后赛')
+    .replace(/Group Stage/ig, '小组赛')
+    .replace(/Showmatch/ig, '表演赛')
+    .replace(/Qualifier/ig, '预选赛')
+    .replace(/Closed/ig, '封闭')
+    .replace(/Open/ig, '公开')
+    .replace(/Finals/ig, '总决赛')
+    .replace(/Final/ig, '决赛')
+    .replace(/Quarterfinal/ig, '1/4决赛')
+    .replace(/Semifinal/ig, '半决赛')
+    .replace(/Grand Final/ig, '总决赛')
+    .replace(/Europe/ig, '欧洲')
+    .replace(/North America/ig, '北美')
+    .replace(/South America/ig, '南美')
+    .replace(/Asia/ig, '亚洲')
+    .replace(/World Championship/ig, '全球总决赛')
+    .replace(/Stage/ig, '阶段')
+    .replace(/League/ig, '联赛')
+    .replace(/Championship/ig, '锦标赛');
+};
 
 export const fetchCsgoMatches = async (): Promise<CsgoMatch[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(MOCK_CSGO_MATCHES);
-    }, 400); // simulate network delay
-  });
+  try {
+    const [upcomingRes, pastRes1, pastRes2] = await Promise.all([
+      fetch(`${BASE_URL}/csgo/matches?filter[status]=running,not_started&sort=begin_at&per_page=100`, {
+        headers: { 'Authorization': `Bearer ${PANDASCORE_API_KEY}`, 'Accept': 'application/json' }
+      }),
+      fetch(`${BASE_URL}/csgo/matches?filter[status]=finished&sort=-begin_at&per_page=100&page=1`, {
+        headers: { 'Authorization': `Bearer ${PANDASCORE_API_KEY}`, 'Accept': 'application/json' }
+      }),
+      fetch(`${BASE_URL}/csgo/matches?filter[status]=finished&sort=-begin_at&per_page=100&page=2`, {
+        headers: { 'Authorization': `Bearer ${PANDASCORE_API_KEY}`, 'Accept': 'application/json' }
+      })
+    ]);
+
+    const upcomingData = upcomingRes.ok ? await upcomingRes.json() : [];
+    const pastData1 = pastRes1.ok ? await pastRes1.json() : [];
+    const pastData2 = pastRes2.ok ? await pastRes2.json() : [];
+
+    const data = [...upcomingData, ...pastData1, ...pastData2];
+    
+    // Filter out matches that don't have exactly 2 opponents and filter by high-tier tournaments
+    const validMatches = data.filter((m: any) => {
+      if (!m.opponents || m.opponents.length !== 2) return false;
+      
+      const tier = m.league?.tier || m.serie?.tier || m.tournament?.tier;
+      if (tier === 's' || tier === 'a' || tier === 'b') return true;
+      
+      const name = ((m.league?.name || '') + ' ' + (m.serie?.name || '') + ' ' + (m.tournament?.name || '')).toLowerCase();
+      if (/iem|blast|pgl|esl|epl|major|cac|roobet|thunderpick|intel/i.test(name)) return true;
+      
+      return false;
+    });
+
+    const formattedMatches = validMatches.map((match: any, index: number) => {
+      let status: 'FINISHED' | 'IN_PLAY' | 'TIMED' = 'TIMED';
+      if (match.status === 'running') status = 'IN_PLAY';
+      if (match.status === 'finished') status = 'FINISHED';
+
+      const homeOpponent = match.opponents[0].opponent;
+      const awayOpponent = match.opponents[1].opponent;
+
+      // Extract scores if available
+      const homeScoreObj = match.results?.find((r: any) => r.team_id === homeOpponent.id);
+      const awayScoreObj = match.results?.find((r: any) => r.team_id === awayOpponent.id);
+
+      // Maps
+      const maps: CsgoMapScore[] = (match.games || []).map((game: any, gIndex: number) => {
+        let winner: 'HOME' | 'AWAY' | undefined = undefined;
+        if (game.winner?.id === homeOpponent.id) winner = 'HOME';
+        if (game.winner?.id === awayOpponent.id) winner = 'AWAY';
+        
+        let gameStatus: 'FINISHED' | 'IN_PLAY' | 'UNPLAYED' = 'UNPLAYED';
+        if (game.status === 'finished') gameStatus = 'FINISHED';
+        if (game.status === 'running') gameStatus = 'IN_PLAY';
+
+        return {
+          mapName: game.position ? `Map ${game.position}` : `Map ${gIndex + 1}`,
+          homeScore: gameStatus === 'FINISHED' ? (winner === 'HOME' ? 13 : 0) : 0, 
+          awayScore: gameStatus === 'FINISHED' ? (winner === 'AWAY' ? 13 : 0) : 0,
+          status: gameStatus,
+          winner: winner
+        };
+      });
+
+      // The UI filters by stage
+      const stageRaw = match.tournament?.name || match.league?.name || 'Tournament';
+      const stage = translateName(stageRaw);
+
+      return {
+        id: match.id.toString(),
+        tournamentName: translateName((match.league?.name || '') + ' ' + (match.serie?.name || '')),
+        stage: stage,
+        utcDate: match.begin_at || match.scheduled_at || new Date().toISOString(),
+        status: status,
+        homeTeam: {
+          id: homeOpponent.id.toString(),
+          name: homeOpponent.name || 'Unknown',
+          tla: homeOpponent.acronym || homeOpponent.name?.substring(0, 3).toUpperCase() || 'TBA',
+          flagCode: homeOpponent.location || 'UN',
+          logoUrl: homeOpponent.image_url,
+        },
+        awayTeam: {
+          id: awayOpponent.id.toString(),
+          name: awayOpponent.name || 'Unknown',
+          tla: awayOpponent.acronym || awayOpponent.name?.substring(0, 3).toUpperCase() || 'TBA',
+          flagCode: awayOpponent.location || 'UN',
+          logoUrl: awayOpponent.image_url,
+        },
+        score: {
+          home: homeScoreObj?.score || 0,
+          away: awayScoreObj?.score || 0,
+        },
+        maps: maps,
+      };
+    });
+
+    const now = Date.now();
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+    const tourneyLatestTime: Record<string, number> = {};
+    const tourneyEarliestTime: Record<string, number> = {};
+
+    formattedMatches.forEach((m: any) => {
+      const time = new Date(m.utcDate).getTime();
+      if (!tourneyLatestTime[m.tournamentName] || time > tourneyLatestTime[m.tournamentName]) {
+        tourneyLatestTime[m.tournamentName] = time;
+      }
+      if (!tourneyEarliestTime[m.tournamentName] || time < tourneyEarliestTime[m.tournamentName]) {
+        tourneyEarliestTime[m.tournamentName] = time;
+      }
+    });
+
+    const timeFilteredMatches = formattedMatches.filter((m: any) => {
+      const latest = tourneyLatestTime[m.tournamentName];
+      const earliest = tourneyEarliestTime[m.tournamentName];
+      
+      // If the tournament's latest match is older than 7 days, discard
+      if (now - latest > SEVEN_DAYS_MS) return false;
+      // If the tournament's earliest match is more than 30 days in the future, discard
+      if (earliest - now > THIRTY_DAYS_MS) return false;
+
+      return true;
+    });
+
+    // Sort chronologically ascending
+    return timeFilteredMatches.sort((a: any, b: any) => {
+      const timeA = new Date(a.utcDate).getTime();
+      const timeB = new Date(b.utcDate).getTime();
+      return timeA - timeB;
+    });
+  } catch (error) {
+    console.error('Error fetching PandaScore API:', error);
+    return [];
+  }
 };

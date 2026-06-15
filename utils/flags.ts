@@ -151,6 +151,9 @@ export const getTeamFlagCode = (teamName: string): string | undefined => {
     "gabon": "GA",
     "zambia": "ZM",
     "burkina faso": "BF",
+    "cape verde": "CV",
+    "cabo verde": "CV",
+    "cape verde islands": "CV",
     
     "japan": "JP",
     "south korea": "KR",

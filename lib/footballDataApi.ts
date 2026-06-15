@@ -74,6 +74,7 @@ export interface FootballDataMatch {
   awayTeam: MatchTeam;
   score: MatchScore;
   odds_win_rate?: string; // Optional custom odds tag matching user screenshots
+  venue?: string; // Add stadium venue info
 }
 
 export interface FootballDataMatchesResponse {

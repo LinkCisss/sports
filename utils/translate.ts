@@ -152,6 +152,9 @@ const TEAM_DICTIONARY: Record<string, string> = {
   "Indonesia": "印度尼西亚",
   "India": "印度",
   "New Zealand": "新西兰",
+  "Cape Verde": "佛得角",
+  "Cabo Verde": "佛得角",
+  "Cape Verde Islands": "佛得角",
   
   // fallback for generic draw
   "Draw": "平局"

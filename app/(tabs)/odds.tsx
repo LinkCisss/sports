@@ -49,29 +49,15 @@ export default function HomeScreen() {
   // 生成顶部日期数据
   const dateOptions = useMemo(() => {
     const options = [];
-    if (selectedLeague === 'soccer_fifa_world_cup') {
-      // 世界杯专属日期轴 (2026-06-11 开始)
-      const wcStart = dayjs('2026-06-11');
-      for (let i = 0; i <= 14; i++) {
-        const d = wcStart.add(i, 'day');
-        let label = d.format('MM-DD');
-        if (d.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')) {
-          label = isZh ? '今天' : 'Today';
-        }
-        options.push({ label, value: d.format('YYYY-MM-DD') });
-      }
-    } else {
-      for (let i = -1; i <= 7; i++) {
-        const d = dayjs().add(i, 'day');
-        let label = d.format('MM-DD');
-        if (i === 0) label = isZh ? '今天' : 'Today';
-        else if (i === -1) label = isZh ? '昨天' : 'Yesterday';
-        else if (i === 1) label = isZh ? '明天' : 'Tomorrow';
-        options.push({ label, value: d.format('YYYY-MM-DD') });
-      }
+    for (let i = 0; i <= 14; i++) {
+      const d = dayjs().add(i, 'day');
+      let label = d.format('MM-DD');
+      if (i === 0) label = isZh ? '今天' : 'Today';
+      else if (i === 1) label = isZh ? '明天' : 'Tomorrow';
+      options.push({ label, value: d.format('YYYY-MM-DD') });
     }
     return options;
-  }, [isZh, selectedLeague]);
+  }, [isZh]);
 
   const loadMatches = async (leagueKey: string, dateStr: string) => {
     const data = await fetchLiveMatchesWithOdds(leagueKey, dateStr);

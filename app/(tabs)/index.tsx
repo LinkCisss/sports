@@ -64,10 +64,7 @@ const STAGES = [
   { key: 'FINAL', labelZh: '决赛', labelEn: 'Final' },
 ];
 
-const CSGO_STAGES = [
-  { key: 'CHAMPIONS_STAGE', labelZh: '冠军赛', labelEn: 'Champions Stage' },
-  { key: 'LEGENDS_STAGE', labelZh: '传奇赛', labelEn: 'Legends Stage' },
-];
+// CSGO stages are dynamic
 
 const TEAM_FLAG_COLORS: Record<string, string[]> = {
   "Mexico": ["#006847", "#CE1126"],
@@ -118,7 +115,26 @@ const getTeamAbbreviation = (name: string, tla: string): string => {
   return tla;
 };
 
-const renderTeamEmblem = (teamName: string, size: number = 20, isFinished: boolean = false) => {
+const renderTeamEmblem = (teamName: string, size: number = 20, isFinished: boolean = false, logoUrl?: string) => {
+  if (logoUrl) {
+    return (
+      <View style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        overflow: 'hidden',
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: size > 30 ? 3 : 1.5,
+        borderColor: 'rgba(255,255,255,0.2)',
+        opacity: isFinished ? 0.7 : 1,
+      }}>
+        <Image source={{ uri: logoUrl }} style={{ width: size > 30 ? '80%' : '100%', height: size > 30 ? '80%' : '100%', resizeMode: 'contain' }} />
+      </View>
+    );
+  }
+
   const tColors = CSGO_TEAM_COLORS[teamName] || ['#3A86FF', '#8338EC'];
   let initials = '';
   if (teamName.includes('G2')) {
@@ -168,7 +184,8 @@ export default function ScheduleScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const [csgoMatches, setCsgoMatches] = useState<CsgoMatch[]>([]);
   const [csgoLoading, setCsgoLoading] = useState(false);
-  const [csgoSelectedStage, setCsgoSelectedStage] = useState<'CHAMPIONS_STAGE' | 'LEGENDS_STAGE'>('CHAMPIONS_STAGE');
+  const [csgoSelectedTournament, setCsgoSelectedTournament] = useState<string>('');
+  const [csgoSelectedSubStage, setCsgoSelectedSubStage] = useState<string>('');
   const [selectedCsgoDetailMatch, setSelectedCsgoDetailMatch] = useState<CsgoMatch | null>(null);
 
   const [selectedStage, setSelectedStage] = useState('GROUP_STAGE');
@@ -267,6 +284,39 @@ export default function ScheduleScreen() {
     try {
       const res = await fetchCsgoMatches();
       setCsgoMatches(res);
+      if (res.length > 0) {
+        const tourneyScores: Record<string, number> = {};
+        res.forEach(m => {
+          if (m.status === 'IN_PLAY') tourneyScores[m.tournamentName] = 10000000000000;
+          else {
+            const time = new Date(m.utcDate).getTime();
+            if (!tourneyScores[m.tournamentName] || time > tourneyScores[m.tournamentName]) {
+              tourneyScores[m.tournamentName] = time;
+            }
+          }
+        });
+        const tournaments = Array.from(new Set(res.map(m => m.tournamentName))).sort((a, b) => (tourneyScores[b] || 0) - (tourneyScores[a] || 0));
+        
+        const liveMatch = res.find(m => m.status === 'IN_PLAY');
+        
+        let targetTourney = tournaments[0];
+        if (liveMatch) targetTourney = liveMatch.tournamentName;
+
+        setCsgoSelectedTournament(prevTourney => {
+          const activeTourney = tournaments.includes(prevTourney) ? prevTourney : targetTourney;
+          
+          setCsgoSelectedSubStage(prevStage => {
+            const matchesInTourney = res.filter(m => m.tournamentName === activeTourney);
+            const stagesInTourney = Array.from(new Set(matchesInTourney.map(m => m.stage)));
+            if (stagesInTourney.includes(prevStage)) return prevStage;
+            const liveSubMatch = matchesInTourney.find(m => m.status === 'IN_PLAY');
+            if (liveSubMatch) return liveSubMatch.stage;
+            return stagesInTourney[stagesInTourney.length - 1] || '';
+          });
+          
+          return activeTourney;
+        });
+      }
     } catch (err) {
       console.error('Error loading CS:GO data:', err);
     } finally {
@@ -412,7 +462,7 @@ export default function ScheduleScreen() {
 
   const groupedFixtures = groupMatchesByDate(groupMatches);
 
-  const filteredCsgoMatches = csgoMatches.filter(m => m.stage === csgoSelectedStage);
+  const filteredCsgoMatches = csgoMatches.filter(m => m.tournamentName === csgoSelectedTournament && m.stage === csgoSelectedSubStage);
   const groupCsgoMatchesByDate = (list: CsgoMatch[]) => {
     const map: Record<string, CsgoMatch[]> = {};
     list.forEach(m => {
@@ -505,7 +555,20 @@ export default function ScheduleScreen() {
   );
 
   // Render Group Match List
-  const renderGroupMatches = () => (
+  const renderGroupMatches = () => {
+    // Helper to get team record W-D-L from standings
+    const getTeamRecord = (teamId: number) => {
+      if (!standings || standings.length === 0) return '';
+      for (const group of standings) {
+        const entry = group.table.find(t => t.team.id === teamId);
+        if (entry) {
+          return `${entry.won}-${entry.draw}-${entry.lost}`;
+        }
+      }
+      return '';
+    };
+
+    return (
     <ScrollView 
       ref={groupScrollRef}
       showsVerticalScrollIndicator={false} 
@@ -546,8 +609,8 @@ export default function ScheduleScreen() {
                 
                 {/* Match sub-header */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, zIndex: 5 }}>
-                  <Text style={[styles.matchSubHeader, { color: colors.textSecondary, marginBottom: 0 }]}>
-                    {getStageText(match.stage)}
+                  <Text style={[styles.matchSubHeader, { color: colors.textSecondary, marginBottom: 0 }]} numberOfLines={1}>
+                    {getStageText(match.stage)}{match.venue ? ` · ${match.venue}` : ''}
                   </Text>
                   {isFinished && (
                     <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary }}>
@@ -586,7 +649,7 @@ export default function ScheduleScreen() {
                         <View style={[styles.flagPlaceholder, { backgroundColor: colors.border }]} />
                       )}
                     </View>
-                    <Text style={[styles.recordText, { color: colors.textSecondary }]}>0-0-0</Text>
+                    <Text style={[styles.recordText, { color: colors.textSecondary }]}>{getTeamRecord(match.homeTeam.id)}</Text>
                   </View>
 
                   {/* Time / Score Center */}
@@ -635,7 +698,7 @@ export default function ScheduleScreen() {
                         <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textSecondary }}>{isZh ? '客' : 'A'}</Text>
                       </View>
                     </View>
-                    <Text style={[styles.recordText, { color: colors.textSecondary }]}>0-0-0</Text>
+                    <Text style={[styles.recordText, { color: colors.textSecondary }]}>{getTeamRecord(match.awayTeam.id)}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -646,6 +709,7 @@ export default function ScheduleScreen() {
       <View style={{ height: 120 }} />
     </ScrollView>
   );
+  };
 
   // Render bracket placeholder / seed badge inside knockout circles
   const renderPlaceholderBadge = (name: string) => {
@@ -824,6 +888,16 @@ export default function ScheduleScreen() {
           >
             <FontAwesome name="chevron-left" size={18} color="#FFFFFF" />
           </Pressable>
+          <Pressable 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              alert('已发送至灵动岛 (Live Activity Started)');
+            }} 
+            style={[styles.pkIconBtn, { width: 'auto', paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.3)' }]}
+          >
+            <FontAwesome name="apple" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>上岛</Text>
+          </Pressable>
         </View>
 
         <ScrollView 
@@ -832,7 +906,7 @@ export default function ScheduleScreen() {
         >
           {/* Stage name */}
           <Text style={styles.pkStageTitle}>
-            {getStageText(selectedDetailMatch.stage)}
+            {getStageText(selectedDetailMatch.stage)}{selectedDetailMatch.venue ? ` · ${selectedDetailMatch.venue}` : ''}
           </Text>
 
           {/* PK Duel Header */}
@@ -1172,6 +1246,11 @@ export default function ScheduleScreen() {
                         </Text>
                       </View>
                     )}
+                    {!isFinished && !isLive && (
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: colors.accent }}>
+                        {isZh ? '未开始' : 'UPCOMING'}
+                      </Text>
+                    )}
                   </View>
                   
                   {/* Match row */}
@@ -1191,7 +1270,7 @@ export default function ScheduleScreen() {
                             {match.homeTeam.name}
                           </Text>
                         </View>
-                        {renderTeamEmblem(match.homeTeam.name, 20, isFinished)}
+                        {renderTeamEmblem(match.homeTeam.name, 28, isFinished, match.homeTeam.logoUrl)}
                       </View>
                     </View>
 
@@ -1219,7 +1298,7 @@ export default function ScheduleScreen() {
                     {/* Away Team */}
                     <View style={[styles.teamColumn, { alignItems: 'flex-start' }]}>
                       <View style={styles.teamRowAlign}>
-                        {renderTeamEmblem(match.awayTeam.name, 20, isFinished)}
+                        {renderTeamEmblem(match.awayTeam.name, 28, isFinished, match.awayTeam.logoUrl)}
                         <View style={{ alignItems: 'flex-start', marginLeft: 8 }}>
                           <Text style={[
                             { fontSize: 15, fontWeight: '700', color: colors.text },
@@ -1320,7 +1399,7 @@ export default function ScheduleScreen() {
               {/* Home Team */}
               <View style={styles.pkTeamCol}>
                 <View style={{ marginBottom: 8 }}>
-                  {renderTeamEmblem(homeTeam.name, 60)}
+                  {renderTeamEmblem(homeTeam.name, 60, false, homeTeam.logoUrl)}
                 </View>
                 <Text style={[styles.pkTeamName, { fontSize: 18, fontWeight: '800' }]} numberOfLines={1}>
                   {getTeamAbbreviation(homeTeam.name, homeTeam.tla)}
@@ -1361,7 +1440,7 @@ export default function ScheduleScreen() {
               {/* Away Team */}
               <View style={styles.pkTeamCol}>
                 <View style={{ marginBottom: 8 }}>
-                  {renderTeamEmblem(awayTeam.name, 60)}
+                  {renderTeamEmblem(awayTeam.name, 60, false, awayTeam.logoUrl)}
                 </View>
                 <Text style={[styles.pkTeamName, { fontSize: 18, fontWeight: '800' }]} numberOfLines={1}>
                   {getTeamAbbreviation(awayTeam.name, awayTeam.tla)}
@@ -1692,38 +1771,103 @@ export default function ScheduleScreen() {
         )}
 
         {currentSport === 'csgo' && (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.stageTabBar}
-            contentContainerStyle={styles.stageTabContent}
-          >
-            {CSGO_STAGES.map((stage) => {
-              const isActive = csgoSelectedStage === stage.key;
-              return (
-                <Pressable
-                  key={stage.key}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                    setCsgoSelectedStage(stage.key as any);
-                  }}
-                  style={[
-                    styles.stageTabItem,
-                    isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
-                  ]}
-                >
-                  <Text
+          <View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.stageTabBar}
+              contentContainerStyle={styles.stageTabContent}
+            >
+              {(() => {
+                const tourneyScores: Record<string, number> = {};
+                csgoMatches.forEach(m => {
+                  if (m.status === 'IN_PLAY') tourneyScores[m.tournamentName] = 10000000000000;
+                  else {
+                    const time = new Date(m.utcDate).getTime();
+                    if (!tourneyScores[m.tournamentName] || time > tourneyScores[m.tournamentName]) {
+                      tourneyScores[m.tournamentName] = time;
+                    }
+                  }
+                });
+                const sortedTourneys = Array.from(new Set(csgoMatches.map(m => m.tournamentName))).sort((a, b) => (tourneyScores[b] || 0) - (tourneyScores[a] || 0));
+                
+                return sortedTourneys.map((tourney) => {
+                  const isActive = csgoSelectedTournament === tourney;
+                  return (
+                  <Pressable
+                    key={tourney}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setCsgoSelectedTournament(tourney);
+                      // Auto-select substage
+                      const matchesInTourney = csgoMatches.filter(m => m.tournamentName === tourney);
+                      const stagesInTourney = Array.from(new Set(matchesInTourney.map(m => m.stage)));
+                      const liveSubMatch = matchesInTourney.find(m => m.status === 'IN_PLAY');
+                      if (liveSubMatch) setCsgoSelectedSubStage(liveSubMatch.stage);
+                      else setCsgoSelectedSubStage(stagesInTourney[stagesInTourney.length - 1] || '');
+                    }}
                     style={[
-                      styles.stageTabText,
-                      { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                      styles.stageTabItem,
+                      isActive ? { backgroundColor: colors.accent } : { backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.15)' }
                     ]}
                   >
-                    {isZh ? stage.labelZh : stage.labelEn}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                    <Text
+                      style={[
+                        styles.stageTabText,
+                        { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                      ]}
+                    >
+                      {tourney}
+                    </Text>
+                  </Pressable>
+                );
+              });
+              })()}
+            </ScrollView>
+
+            {csgoSelectedTournament && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={[styles.stageTabBar, { marginTop: 0, marginBottom: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 12 }]}
+                contentContainerStyle={styles.stageTabContent}
+              >
+                {Array.from(new Set(csgoMatches.filter(m => m.tournamentName === csgoSelectedTournament).map(m => m.stage))).map((stage) => {
+                  const isActive = csgoSelectedSubStage === stage;
+                  const stageMatches = csgoMatches.filter(m => m.tournamentName === csgoSelectedTournament && m.stage === stage);
+                  const isStageLive = stageMatches.some(m => m.status === 'IN_PLAY');
+                  const isStageFinished = stageMatches.length > 0 && stageMatches.every(m => m.status === 'FINISHED');
+
+                  return (
+                    <Pressable
+                      key={stage}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setCsgoSelectedSubStage(stage);
+                      }}
+                      style={[
+                        styles.stageTabItem,
+                        isActive ? { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: colors.accent, borderWidth: 1 } : { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'transparent' },
+                        { paddingHorizontal: 12, paddingVertical: 6, minHeight: 0 }
+                      ]}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {isStageLive && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF3B30', marginRight: 6 }} />}
+                        <Text
+                          style={[
+                            styles.stageTabText,
+                            { color: isActive ? colors.text : colors.textSecondary, fontSize: 13 }
+                          ]}
+                        >
+                          {stage} {isStageFinished ? (isZh ? '(已结束)' : '(Finished)') : ''}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
         )}
 
         {/* Sub-selector for Group stage (Standings vs Matches) */}
