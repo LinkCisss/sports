@@ -36,6 +36,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.2"
+          }
+        }
+      ],
       "./plugins/withLiveActivities.js"
     ],
     "experiments": {

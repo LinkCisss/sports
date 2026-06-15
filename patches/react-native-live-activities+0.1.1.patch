@@ -1,0 +1,24 @@
+diff --git a/node_modules/react-native-live-activities/react-native-live-activities.podspec b/node_modules/react-native-live-activities/react-native-live-activities.podspec
+index 752f493..71ba297 100644
+--- a/node_modules/react-native-live-activities/react-native-live-activities.podspec
++++ b/node_modules/react-native-live-activities/react-native-live-activities.podspec
+@@ -26,10 +26,14 @@ Pod::Spec.new do |s|
+         "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
+     }
+ 
+-    s.dependency "React-Codegen"
+-    s.dependency "RCT-Folly"
+-    s.dependency "RCTRequired"
+-    s.dependency "RCTTypeSafety"
+-    s.dependency "ReactCommon/turbomodule/core"
++    if respond_to?(:install_modules_dependencies, true)
++      install_modules_dependencies(s)
++    else
++      s.dependency "React-Codegen"
++      s.dependency "RCT-Folly"
++      s.dependency "RCTRequired"
++      s.dependency "RCTTypeSafety"
++      s.dependency "ReactCommon/turbomodule/core"
++    end
+   end
+ end

@@ -19,6 +19,13 @@ import { getMatchLineup } from '@/lib/lineupGenerator';
 import { TacticalPitch } from '@/components/TacticalPitch';
 import * as Haptics from 'expo-haptics';
 
+let LiveActivities: any = null;
+try {
+  LiveActivities = require('react-native-live-activities').default;
+} catch (e) {
+  console.log('react-native-live-activities not installed yet');
+}
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Knockout matches mock database matching the tournament format
@@ -591,8 +598,10 @@ export default function ScheduleScreen() {
             const homeFlag = getTeamFlagCode(match.homeTeam.name);
             const awayFlag = getTeamFlagCode(match.awayTeam.name);
             
-            const isFinished = match.status === 'FINISHED';
-            const isLive = match.status === 'IN_PLAY' || match.status === 'LIVE' || match.status === 'PAUSED';
+            const hoursSinceStart = dayjs().diff(dayjs(match.utcDate), 'hour', true);
+            const isFinished = match.status === 'FINISHED' || 
+                               (hoursSinceStart > 4 && ['IN_PLAY', 'LIVE', 'PAUSED'].includes(match.status));
+            const isLive = !isFinished && ['IN_PLAY', 'LIVE', 'PAUSED'].includes(match.status);
             
             return (
               <Pressable 
@@ -857,6 +866,11 @@ export default function ScheduleScreen() {
     // Find standings for this match's group if applicable
     const groupStanding = standings.find(s => s.group === selectedDetailMatch.group);
 
+    const hoursSinceStart = dayjs().diff(dayjs(selectedDetailMatch.utcDate), 'hour', true);
+    const isFinished = selectedDetailMatch.status === 'FINISHED' || 
+                       (hoursSinceStart > 4 && ['IN_PLAY', 'LIVE', 'PAUSED'].includes(selectedDetailMatch.status));
+    const isLive = !isFinished && ['IN_PLAY', 'LIVE', 'PAUSED'].includes(selectedDetailMatch.status);
+
     return (
       <Modal
         visible={!!selectedDetailMatch}
@@ -891,7 +905,22 @@ export default function ScheduleScreen() {
           <Pressable 
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              alert('已发送至灵动岛 (Live Activity Started)');
+              if (LiveActivities) {
+                LiveActivities.startActivity('SportsLiveActivityWidget', {
+                  matchName: getStageText(selectedDetailMatch.stage) + (selectedDetailMatch.venue ? ` · ${selectedDetailMatch.venue}` : ''),
+                  homeTeamName: selectedDetailMatch.homeTeam.name,
+                  homeTeamShort: isZh ? translateTeam(selectedDetailMatch.homeTeam.name) : selectedDetailMatch.homeTeam.shortName || 'H',
+                  awayTeamName: selectedDetailMatch.awayTeam.name,
+                  awayTeamShort: isZh ? translateTeam(selectedDetailMatch.awayTeam.name) : selectedDetailMatch.awayTeam.shortName || 'A',
+                  homeScore: selectedDetailMatch.score.fullTime.home || 0,
+                  awayScore: selectedDetailMatch.score.fullTime.away || 0,
+                  timerDisplay: 'Live',
+                  isLive: true
+                });
+                alert('已成功发送至灵动岛！切到桌面或锁屏查看');
+              } else {
+                alert('请先运行 npm install react-native-live-activities 并重新编译原生 App，才能激活灵动岛功能。');
+              }
             }} 
             style={[styles.pkIconBtn, { width: 'auto', paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.3)' }]}
           >
@@ -929,13 +958,13 @@ export default function ScheduleScreen() {
 
             {/* Time / Score Center */}
             <View style={styles.pkTimeCol}>
-              {selectedDetailMatch.status === 'FINISHED' || selectedDetailMatch.status === 'IN_PLAY' ? (
+            {isFinished || isLive ? (
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF' }}>
                     {selectedDetailMatch.score.fullTime.home} - {selectedDetailMatch.score.fullTime.away}
                   </Text>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: selectedDetailMatch.status === 'IN_PLAY' ? '#FF3B30' : 'rgba(255,255,255,0.6)', marginTop: 4 }}>
-                    {selectedDetailMatch.status === 'IN_PLAY' ? 'LIVE' : 'FINISHED'}
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isLive ? '#FF3B30' : 'rgba(255,255,255,0.6)', marginTop: 4 }}>
+                    {isLive ? 'LIVE' : 'FINISHED'}
                   </Text>
                 </View>
               ) : (

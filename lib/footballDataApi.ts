@@ -199,11 +199,11 @@ const MOCK_MATCHES: FootballDataMatch[] = [
   {
     id: 200002,
     utcDate: '2026-06-12T10:00:00Z',
-    status: 'IN_PLAY',
+    status: 'FINISHED',
     matchday: 1,
     stage: 'GROUP_STAGE',
     group: 'GROUP_A',
-    lastUpdated: '2026-06-12T11:00:00Z',
+    lastUpdated: '2026-06-12T12:00:00Z',
     homeTeam: { id: 1003, name: 'South Korea', shortName: 'South Korea', tla: 'KOR', crest: 'KR' },
     awayTeam: { id: 1004, name: 'Czech Republic', shortName: 'Czech Rep', tla: 'CZE', crest: 'CZ' },
     score: { winner: null, duration: 'REGULAR', fullTime: { home: 1, away: 1 }, halfTime: { home: 0, away: 1 } },
